@@ -157,7 +157,7 @@ def main():
 
     set_seed(args)
 
-    tic = time.perf_counter()
+    
 
     args.model_type = args.model_type.lower()
     model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
@@ -179,6 +179,7 @@ def main():
     print(args)
     while True:
         raw_text = args.prompt if args.prompt else input("Model prompt >>> ")
+        tic = time.perf_counter()
         if args.model_type in ["transfo-xl", "xlnet"]:
             # Models with memory likes to have a long prompt for short inputs.
             raw_text = (args.padding_text if args.padding_text else PADDING_TEXT) + raw_text
@@ -199,7 +200,8 @@ def main():
         toc = time.perf_counter()
         print(text)
         print()
-        print(f"Generate the text in {toc - tic:0.4f} seconds")
+        print(f"The generation runtime: {toc - tic:0.4f} seconds")
+        print(f"The generation runtime per token: {(toc - tic) / args.length:0.4f} seconds")
         print("=============================================")
         if args.prompt:
             break
