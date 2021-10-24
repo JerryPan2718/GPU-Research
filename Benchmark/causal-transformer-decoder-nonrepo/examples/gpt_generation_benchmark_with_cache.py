@@ -95,9 +95,9 @@ with torch.no_grad():
             top_indices = torch.argmax(logits, dim=-1)
             top_indices_last_token = top_indices[-1:]
             decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-            # if i in output_lens:
-            #     times_causal_decoder.append(time.time() - t)
-
+            if i in output_lens:
+                times_causal_decoder.append(time.time() - t)
+print(mem_len, max(output_lens), time_causal_decoder)
 # print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
 # for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
 #     output_lens,
