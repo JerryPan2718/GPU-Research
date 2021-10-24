@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import time
 import numpy as np
+import time
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 hdim = 768
@@ -58,21 +59,21 @@ print(
 # here. Each of them is around 2.3M parameters, so *12 it's around 27M params
 
 
-# GPT-2 inference
-print("Inference for GPT-2...")
-generated = tokenizer.encode("A")
-context = torch.tensor([generated]).to(device=device)
-past = None
-times_gpt = []
-t = time.time()
-with torch.no_grad():
-    for i in range(1, output_lens[-1] + 1):
-        outputs = model(context, past_key_values=past)
-        token = torch.argmax(outputs.logits[-1, :])
-        generated += [token.tolist()]
-        context = token.unsqueeze(0)
-        if i in output_lens:
-            times_gpt.append(time.time() - t)
+# # GPT-2 inference
+# print("Inference for GPT-2...")
+# generated = tokenizer.encode("A")
+# context = torch.tensor([generated]).to(device=device)
+# past = None
+# times_gpt = []
+# t = time.time()
+# with torch.no_grad():
+#     for i in range(1, output_lens[-1] + 1):
+#         outputs = model(context, past_key_values=past)
+#         token = torch.argmax(outputs.logits[-1, :])
+#         generated += [token.tolist()]
+#         context = token.unsqueeze(0)
+#         if i in output_lens:
+#             times_gpt.append(time.time() - t)
 
 # Causal decoder inference
 print("Inference for Causal Decoder...")
@@ -81,25 +82,27 @@ decoded_tokens = first_token
 t = time.time()
 times_causal_decoder = []
 with torch.no_grad():
-    cache = None
-    # print("original cache: " + str(cache))
-    for i in range(1, output_lens[-1] + 1):
-        decoded_embeddings = embedding(decoded_tokens)
-        output, cache = causal_decoder(decoded_embeddings, None, cache)
-        cache = cache[-1 * mem_len:]
-        # print(i + ": " + cache)
-        logits = to_vocab(output)
-        top_indices = torch.argmax(logits, dim=-1)
-        top_indices_last_token = top_indices[-1:]
-        decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-        if i in output_lens:
-            times_causal_decoder.append(time.time() - t)
+    for _ in range(4):
+        time.sleep(2)
+        cache = None
+        # print("original cache: " + str(cache))
+        for i in range(1, output_lens[-1] + 1):
+            decoded_embeddings = embedding(decoded_tokens)
+            output, cache = causal_decoder(decoded_embeddings, None, cache)
+            cache = cache[-1 * mem_len:]
+            # print(i + ": " + cache)
+            logits = to_vocab(output)
+            top_indices = torch.argmax(logits, dim=-1)
+            top_indices_last_token = top_indices[-1:]
+            decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
+            # if i in output_lens:
+            #     times_causal_decoder.append(time.time() - t)
 
-print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
-for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
-    output_lens,
-    times_gpt,
-    times_causal_decoder,
-    np.array(times_causal_decoder) / np.array(times_gpt),
-):
-    print(mem_len, nb_tokens, time_gpt, time_causal_decoder, ratio)
+# print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
+# for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
+#     output_lens,
+#     times_gpt,
+#     times_causal_decoder,
+#     np.array(times_causal_decoder) / np.array(times_gpt),
+# ):
+#     print(mem_len, nb_tokens, time_gpt, time_causal_decoder, ratio)
