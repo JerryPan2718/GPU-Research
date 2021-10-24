@@ -14,7 +14,9 @@ nhead = 12
 dim_feedforward = hdim * 4
 num_layers = 12
 vocab_size = 50257
-output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+# output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+mem_len = [32, 64, 128, 512, 1024]
+output_lens = [1000]
 bsz = 1
 print(f"Device used: {device}")
 
@@ -80,11 +82,13 @@ t = time.time()
 times_causal_decoder = []
 with torch.no_grad():
     cache = None
-    print("original cache: " + str(cache))
+    # print("original cache: " + str(cache))
     for i in range(1, output_lens[-1] + 1):
         decoded_embeddings = embedding(decoded_tokens)
         output, cache = causal_decoder(decoded_embeddings, None, cache)
-        print(str(i) + ": " + str(cache.tolist()))
+        cache = cache[-1 * mem_len:]
+        # print(i + ": " + cache)
+
         logits = to_vocab(output)
         top_indices = torch.argmax(logits, dim=-1)
         top_indices_last_token = top_indices[-1:]
@@ -93,10 +97,11 @@ with torch.no_grad():
             times_causal_decoder.append(time.time() - t)
 
 print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
-for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
+for (cached_mem_length, nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
+    mem_len,
     output_lens,
     times_gpt,
     times_causal_decoder,
     np.array(times_causal_decoder) / np.array(times_gpt),
 ):
-    print(nb_tokens, time_gpt, time_causal_decoder, ratio)
+    print(cached_mem_length, nb_tokens, time_gpt, time_causal_decoder, ratio)
