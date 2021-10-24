@@ -14,9 +14,9 @@ nhead = 12
 dim_feedforward = hdim * 4
 num_layers = 12
 vocab_size = 50257
-# output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-mem_lens = [32, 64, 128, 512, 1024]
-output_lens = [1000]
+output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+# mem_lens = [32, 64, 128, 512, 1024]
+mem_len = 32
 bsz = 1
 print(f"Device used: {device}")
 
@@ -81,27 +81,25 @@ decoded_tokens = first_token
 t = time.time()
 times_causal_decoder = []
 with torch.no_grad():
-    for mem_len in mem_lens:
-        cache = None
-        # print("original cache: " + str(cache))
-        for i in range(1, output_lens[-1] + 1):
-            decoded_embeddings = embedding(decoded_tokens)
-            output, cache = causal_decoder(decoded_embeddings, None, cache)
-            cache = cache[-1 * mem_len:]
-            # print(i + ": " + cache)
-            logits = to_vocab(output)
-            top_indices = torch.argmax(logits, dim=-1)
-            top_indices_last_token = top_indices[-1:]
-            decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-            if i in output_lens:
-                times_causal_decoder.append(time.time() - t)
+    cache = None
+    # print("original cache: " + str(cache))
+    for i in range(1, output_lens[-1] + 1):
+        decoded_embeddings = embedding(decoded_tokens)
+        output, cache = causal_decoder(decoded_embeddings, None, cache)
+        cache = cache[-1 * mem_len:]
+        # print(i + ": " + cache)
+        logits = to_vocab(output)
+        top_indices = torch.argmax(logits, dim=-1)
+        top_indices_last_token = top_indices[-1:]
+        decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
+        if i in output_lens:
+            times_causal_decoder.append(time.time() - t)
 
 print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
-for (cached_mem_length, nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
-    mem_lens,
+for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
     output_lens,
     times_gpt,
     times_causal_decoder,
     np.array(times_causal_decoder) / np.array(times_gpt),
 ):
-    print(cached_mem_length, nb_tokens, time_gpt, time_causal_decoder, ratio)
+    print(mem_len, nb_tokens, time_gpt, time_causal_decoder, ratio)
