@@ -80,11 +80,11 @@ t = time.time()
 times_causal_decoder = []
 with torch.no_grad():
     cache = None
-    print("original cache: " + cache)
+    print("original cache: " + str(cache))
     for i in range(1, output_lens[-1] + 1):
         decoded_embeddings = embedding(decoded_tokens)
         output, cache = causal_decoder(decoded_embeddings, None, cache)
-        print(i + ": " + cache)
+        print(str(i) + ": " + str(cache.tolist()))
         logits = to_vocab(output)
         top_indices = torch.argmax(logits, dim=-1)
         top_indices_last_token = top_indices[-1:]
