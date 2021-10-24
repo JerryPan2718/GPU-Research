@@ -88,8 +88,8 @@ with torch.no_grad():
         # print("original cache: " + str(cache))
         for i in range(1, output_lens[-1] + 1):
             decoded_embeddings = embedding(decoded_tokens)
-            output, cache = causal_decoder(decoded_embeddings, None, cache)
-            cache = cache[-1 * mem_len:]
+            output, cache = causal_decoder(decoded_embeddings, None, cache[-1 * mem_len:])
+            # cache = cache[-1 * mem_len:]
             # print(i + ": " + cache)
             logits = to_vocab(output)
             top_indices = torch.argmax(logits, dim=-1)
