@@ -8,7 +8,6 @@ import torch.nn as nn
 import time
 import numpy as np
 import time
-
 device = "cuda" if torch.cuda.is_available() else "cpu"
 hdim = 768
 nhead = 12
@@ -20,21 +19,16 @@ output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 mem_len = 512
 bsz = 1
 print(f"Device used: {device}")
-
-
 # Initialization:
-
 # GPT2
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 model = GPT2LMHeadModel.from_pretrained("gpt2").to(device=device)
 model.eval()
-
 print(
     "Num parameters GPT-2:",
     sum(p.numel() for p in model.transformer.parameters() if p.requires_grad)
     + sum(p.numel() for p in model.lm_head.parameters() if p.requires_grad),
 )  # 163037184
-
 # Causal Decoder
 causal_decoder = CausalTransformerDecoder(
     CausalTransformerDecoderLayer(
@@ -53,12 +47,9 @@ print(
     + sum(p.numel() for p in to_vocab.parameters() if p.requires_grad)
     + sum(p.numel() for p in embedding.parameters() if p.requires_grad),
 )  # 190666321
-
 # Difference in the number of parameters is due to the encoder-decoder
 # attention matrices that are still stored in the causal decoder (but not used)
 # here. Each of them is around 2.3M parameters, so *12 it's around 27M params
-
-
 # # GPT-2 inference
 # print("Inference for GPT-2...")
 # generated = tokenizer.encode("A")
@@ -74,7 +65,6 @@ print(
 #         context = token.unsqueeze(0)
 #         if i in output_lens:
 #             times_gpt.append(time.time() - t)
-
 # Causal decoder inference
 print("Inference for Causal Decoder...")
 first_token = torch.zeros((1, bsz)).long().to(device=device)
@@ -101,7 +91,6 @@ with torch.no_grad():
             if i in output_lens:
                 times_causal_decoder.append(time.time() - t)
 print(mem_len, max(output_lens), times_causal_decoder)
-
 # print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
 # for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
 #     output_lens,
