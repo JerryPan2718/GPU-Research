@@ -17,8 +17,8 @@
 
 import warnings
 
-from ...configuration_utils import PretrainedConfig
-from ...utils import logging
+from configuration_utils import PretrainedConfig
+from utils import logging
 
 
 logger = logging.get_logger(__name__)
@@ -28,9 +28,6 @@ XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP = {
     "xlnet-large-cased": "https://huggingface.co/xlnet-large-cased/resolve/main/config.json",
 }
 
-
-
-[DOCS]
 class XLNetConfig(PretrainedConfig):
     """
     This is the configuration class to store the configuration of a :class:`~transformers.XLNetModel` or a
