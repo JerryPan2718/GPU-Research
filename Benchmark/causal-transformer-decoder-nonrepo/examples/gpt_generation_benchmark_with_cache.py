@@ -18,7 +18,7 @@ vocab_size = 50257
 output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 # mem_lens = [32, 64, 128, 512, 1024]
 mem_len = 32
-bsz = 1
+bsz = 16
 print(f"Device used: {device}")
 
 
