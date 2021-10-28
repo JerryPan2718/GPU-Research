@@ -35,8 +35,8 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 
         # Initialization:
         # GPT2
-        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-        model = GPT2LMHeadModel.from_pretrained("gpt2").to(device=device)
+        tokenizer = GPT2Tokenizer.from_pretrained("gpt3")
+        model = GPT2LMHeadModel.from_pretrained("gpt3").to(device=device)
 
         # Causal Decoder
         causal_decoder = CausalTransformerDecoder(
