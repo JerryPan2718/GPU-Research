@@ -27,6 +27,8 @@ print(f"Device used: {device}")
 
 ################################### TO CHANGE ###########################################
 def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size):
+    times = []
+    for _ in range(reps):
     start = torch.cuda.Event(enable_timing=True)
     end = torch.cuda.Event(enable_timing=True)
 
