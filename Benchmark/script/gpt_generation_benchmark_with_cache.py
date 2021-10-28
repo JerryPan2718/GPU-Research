@@ -21,7 +21,7 @@ empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.01
 # mem_lens = [32, 64, 128, 512, 1024]
 mem_len = 32
-batch_size = 4
+batch_size = 8
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
@@ -94,7 +94,7 @@ print("Cache: " + str(cache_causal_decoder))
 
 # Output text file
 # output_file_path = "/home/ubuntu/GPU-Research/Benchmark/"
-file_name = output_file_path + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size)
+file_name = output_file_path + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
 print(file_name)
 outF = open(file_name, "w")
 outF.write(str(start.elapsed_time(end)/1000))
