@@ -10,7 +10,7 @@ import numpy as np
 import os
 
 ################################# Configuration ########################################
-output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/causal-transformer-decoder-script (20211027)/"
+output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/causal-transformer-decoder-script (20211028)/"
 hdim = 768
 nhead = 12
 dim_feedforward = hdim * 4
@@ -18,11 +18,11 @@ num_layers = 12
 vocab_size = 50257
 output_len = 1000
 # empty_cache_freq = 0.1
-fetch_cuda_stats_freq = 0.01
+fetch_cuda_stats_freq = 0.005
 # mem_lens = [16]
-mem_lens = [16, 32, 64, 128, 256, 512]
+mem_lens = [16, 32]
 batch_sizes = [16]
-reps = 5
+reps = 2
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
 
