@@ -19,9 +19,9 @@ vocab_size = 50257
 output_len = 1000
 # empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.01
-mem_lens = [16]
-# mem_lens = [16, 32, 64, 128, 256, 512]
-batch_sizes = [8, 16]
+# mem_lens = [16]
+mem_lens = [16, 32, 64, 128, 256, 512]
+batch_sizes = [16]
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
 
