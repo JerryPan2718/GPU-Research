@@ -21,7 +21,7 @@ output_len = 1000
 # empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.005
 # mem_lens = [16]
-mem_lens = [16, 32]
+mem_lens = [16, 32, 64, 128, 256]
 batch_sizes = [16]
 reps = 2
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -73,10 +73,10 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                 else:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
-                    print(type(cache))
+                    # print(type(cache))
                     cache = cache[:, -1 * mem_len:]
                     # cache = [c[-1 * mem_len:] for c in cache]
-                    print(type(cache))
+                    # print(type(cache))
                     print(str(i) + ": " + str(len(cache)) + "\n" + str(len(cache[0])))
                     
                 logits = to_vocab(output)
@@ -117,5 +117,14 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 ################################### Main ###########################################
 for mem_len in mem_lens:
     for batch_size in batch_sizes:
-        gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
+        with torch.profiler.profile(
+                schedule=torch.profiler.schedule(
+                    wait=2,
+                    warmup=2,
+                    active=6,
+                    repeat=1),
+                on_trace_ready=tensorboard_trace_handler,
+                with_stack=True
+        ) as profiler:
+            gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
         print("######################################################################")

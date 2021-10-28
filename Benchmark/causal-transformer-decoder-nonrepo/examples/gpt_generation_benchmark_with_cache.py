@@ -16,8 +16,8 @@ num_layers = 12
 vocab_size = 50257
 output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 # mem_lens = [32, 64, 128, 512, 1024]
-mem_len = 512
-bsz = 1
+mem_len = 32
+bsz = 8
 print(f"Device used: {device}")
 # Initialization:
 # GPT2
@@ -82,7 +82,7 @@ with torch.no_grad():
         else:
             output, cache = causal_decoder(decoded_embeddings, None, cache[-1 * mem_len:])
         # cache = cache[-1 * mem_len:]
-        # print(i + ": " + cache)
+        print(i + ": " + cache)
         logits = to_vocab(output)
         top_indices = torch.argmax(logits, dim=-1)
         top_indices_last_token = top_indices[-1:]
