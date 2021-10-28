@@ -3,6 +3,7 @@ from causal_transformer_decoder import (
     CausalTransformerDecoder,
     CausalTransformerDecoderLayer,
 )
+import tensorflow as tf
 import torch
 import torch.nn as nn
 import time
@@ -10,7 +11,7 @@ import numpy as np
 import os
 
 ################################# Configuration ########################################
-output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/causal-transformer-decoder-script (20211028)/"
+output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/20211028-causal-transformer-decoder-script/"
 hdim = 768
 nhead = 12
 dim_feedforward = hdim * 4
@@ -72,9 +73,12 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                 else:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
-                    cache = cache[-1 * mem_len:]
-                    print(str(i) + ": " + str(cache))
-            
+                    print(type(cache))
+                    cache = cache[:, -1 * mem_len:]
+                    # cache = [c[-1 * mem_len:] for c in cache]
+                    print(type(cache))
+                    print(str(i) + ": " + str(len(cache)) + "\n" + str(len(cache[0])))
+                    
                 logits = to_vocab(output)
                 top_indices = torch.argmax(logits, dim=-1)
                 top_indices_last_token = top_indices[-1:]
