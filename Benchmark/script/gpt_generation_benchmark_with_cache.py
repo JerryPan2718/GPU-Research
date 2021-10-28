@@ -35,8 +35,8 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 
         # Initialization:
         # GPT2
-        tokenizer = GPT2Tokenizer.from_pretrained("gpt3")
-        model = GPT2LMHeadModel.from_pretrained("gpt3").to(device=device)
+        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        model = GPT2LMHeadModel.from_pretrained("gpt2").to(device=device)
 
         # Causal Decoder
         causal_decoder = CausalTransformerDecoder(
@@ -71,8 +71,9 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
                 if cache == None:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                 else:
-                    output, cache = causal_decoder(decoded_embeddings, None, cache[-1 * mem_len:])
-                # cache = cache[-1 * mem_len:]
+                    output, cache = causal_decoder(decoded_embeddings, None, cache)
+                    cache = cache[-1 * mem_len:]
+                    print(str(i) + ": " + str(cache))
             
                 logits = to_vocab(output)
                 top_indices = torch.argmax(logits, dim=-1)
