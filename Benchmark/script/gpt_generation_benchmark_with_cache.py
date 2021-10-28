@@ -7,29 +7,34 @@ import torch
 import torch.nn as nn
 import time
 import numpy as np
-import time
-device = "cuda" if torch.cuda.is_available() else "cpu"
+import os
+
+################################# Configuration ########################################
+output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/causal-transformer-decoder-script (20211027)/"
 hdim = 768
 nhead = 12
 dim_feedforward = hdim * 4
 num_layers = 12
 vocab_size = 50257
-output_lens = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+output_len = 1000
+empty_cache_freq = 0.1
+fetch_cuda_stats_freq = 0.01
 # mem_lens = [32, 64, 128, 512, 1024]
-<<<<<<< HEAD
 mem_len = 32
-bsz = 4
+batch_size = 4
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
+################################### TO CHANGE ###########################################
+
+start = torch.cuda.Event(enable_timing=True)
+end = torch.cuda.Event(enable_timing=True)
+
 # Initialization:
 # GPT2
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 model = GPT2LMHeadModel.from_pretrained("gpt2").to(device=device)
-model.eval()
-print(
-    "Num parameters GPT-2:",
-    sum(p.numel() for p in model.transformer.parameters() if p.requires_grad)
-    + sum(p.numel() for p in model.lm_head.parameters() if p.requires_grad),
-)  # 163037184
+
 # Causal Decoder
 causal_decoder = CausalTransformerDecoder(
     CausalTransformerDecoderLayer(
@@ -42,60 +47,58 @@ to_vocab = nn.Linear(hdim, vocab_size).to(device=device)
 to_vocab.eval()
 embedding = nn.Embedding(vocab_size, hdim).to(device=device)
 embedding.eval()
+
 print(
     "Num parameters causal decoder:",
     sum(p.numel() for p in causal_decoder.parameters() if p.requires_grad)
     + sum(p.numel() for p in to_vocab.parameters() if p.requires_grad)
     + sum(p.numel() for p in embedding.parameters() if p.requires_grad),
-)  # 190666321
-# Difference in the number of parameters is due to the encoder-decoder
-# attention matrices that are still stored in the causal decoder (but not used)
-# here. Each of them is around 2.3M parameters, so *12 it's around 27M params
-# # GPT-2 inference
-# print("Inference for GPT-2...")
-# generated = tokenizer.encode("A")
-# context = torch.tensor([generated]).to(device=device)
-# past = None
-# times_gpt = []
-# t = time.time()
-# with torch.no_grad():
-#     for i in range(1, output_lens[-1] + 1):
-#         outputs = model(context, past_key_values=past)
-#         token = torch.argmax(outputs.logits[-1, :])
-#         generated += [token.tolist()]
-#         context = token.unsqueeze(0)
-#         if i in output_lens:
-#             times_gpt.append(time.time() - t)
-# Causal decoder inference
+)
+
 print("Inference for Causal Decoder...")
-first_token = torch.zeros((1, bsz)).long().to(device=device)
+first_token = torch.zeros((1, batch_size)).long().to(device=device)
 decoded_tokens = first_token
 t = time.time()
-times_causal_decoder = []
+cache_causal_decoder = []
 with torch.no_grad():
-    time.sleep(2)
     cache = None
-    # print("original cache: " + str(cache))
-    for i in range(1, output_lens[-1] + 1):
+    start.record()
+    for i in range(1, output_len + 1):
         decoded_embeddings = embedding(decoded_tokens)
         if cache == None:
             output, cache = causal_decoder(decoded_embeddings, None, cache)
         else:
             output, cache = causal_decoder(decoded_embeddings, None, cache[-1 * mem_len:])
         # cache = cache[-1 * mem_len:]
-        # print(i + ": " + cache)
+    
         logits = to_vocab(output)
         top_indices = torch.argmax(logits, dim=-1)
         top_indices_last_token = top_indices[-1:]
         decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-        if i in output_lens:
-            times_causal_decoder.append(time.time() - t)
-print(mem_len, max(output_lens), times_causal_decoder)
-# print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
-# for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
-#     output_lens,
-#     times_gpt,
-#     times_causal_decoder,
-#     np.array(times_causal_decoder) / np.array(times_gpt),
-# ):
-#     print(mem_len, nb_tokens, time_gpt, time_causal_decoder, ratio)
+        if i % int(fetch_cuda_stats_freq * output_len) == 0:
+            cache_causal_decoder.append(torch.cuda.memory_allocated(device=device))
+        if i % int(empty_cache_freq * output_len) == 0:
+            torch.cuda.empty_cache()
+    end.record()
+
+# Waits for everything to finish running
+torch.cuda.synchronize()
+
+print("========Configuration========")
+print("mem_len: " + str(mem_len))
+print("output_len: " + str(output_len))
+print("batch_size: " + str(batch_size))
+print("========Runtime Summary========")
+print("Runtime: " + str(start.elapsed_time(end)/1000))
+print("Cache: " + str(cache_causal_decoder))
+
+# Output text file
+# output_file_path = "/home/ubuntu/GPU-Research/Benchmark/"
+file_name = output_file_path + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size)
+print(file_name)
+outF = open(file_name, "w")
+outF.write(str(start.elapsed_time(end)/1000))
+outF.write("\n")
+outF.write(str(cache_causal_decoder))
+outF.write("\n")
+
