@@ -112,5 +112,5 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 ################################### Main ###########################################
 for mem_len in mem_lens:
     for batch_size in batch_sizes:
-        gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size)
+        gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
         print("######################################################################")
