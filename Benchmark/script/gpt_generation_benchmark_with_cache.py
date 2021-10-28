@@ -19,8 +19,8 @@ vocab_size = 50257
 output_len = 1000
 # empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.01
-# mem_lens = [32, 64, 128, 512, 1024]
-mem_lens = [16, 32, 64, 128, 256, 512]
+mem_lens = [16]
+# mem_lens = [16, 32, 64, 128, 256, 512]
 batch_sizes = [8, 16]
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
@@ -108,3 +108,4 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 for mem_len in mem_lens:
     for batch_size in batch_sizes:
         gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size)
+        print("######################################################################")
