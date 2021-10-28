@@ -20,8 +20,8 @@ output_len = 1000
 empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.01
 # mem_lens = [32, 64, 128, 512, 1024]
-mem_len = 32
-batch_size = 8
+mem_len = 64
+batch_size = 16
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
@@ -77,8 +77,9 @@ with torch.no_grad():
         decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
         if i % int(fetch_cuda_stats_freq * output_len) == 0:
             cache_causal_decoder.append(torch.cuda.memory_allocated(device=device))
-        if i % int(empty_cache_freq * output_len) == 0:
             torch.cuda.empty_cache()
+        # if i % int(empty_cache_freq * output_len) == 0:
+        #     torch.cuda.empty_cache()
     end.record()
 
 # Waits for everything to finish running
