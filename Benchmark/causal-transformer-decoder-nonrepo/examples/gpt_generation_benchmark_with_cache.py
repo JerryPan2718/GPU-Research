@@ -72,24 +72,23 @@ decoded_tokens = first_token
 t = time.time()
 times_causal_decoder = []
 with torch.no_grad():
-    for _ in range(4):
-        time.sleep(2)
-        cache = None
-        # print("original cache: " + str(cache))
-        for i in range(1, output_lens[-1] + 1):
-            decoded_embeddings = embedding(decoded_tokens)
-            if cache == None:
-                output, cache = causal_decoder(decoded_embeddings, None, cache)
-            else:
-                output, cache = causal_decoder(decoded_embeddings, None, cache[-1 * mem_len:])
-            # cache = cache[-1 * mem_len:]
-            # print(i + ": " + cache)
-            logits = to_vocab(output)
-            top_indices = torch.argmax(logits, dim=-1)
-            top_indices_last_token = top_indices[-1:]
-            decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-            if i in output_lens:
-                times_causal_decoder.append(time.time() - t)
+    time.sleep(2)
+    cache = None
+    # print("original cache: " + str(cache))
+    for i in range(1, output_lens[-1] + 1):
+        decoded_embeddings = embedding(decoded_tokens)
+        if cache == None:
+            output, cache = causal_decoder(decoded_embeddings, None, cache)
+        else:
+            output, cache = causal_decoder(decoded_embeddings, None, cache[-1 * mem_len:])
+        # cache = cache[-1 * mem_len:]
+        # print(i + ": " + cache)
+        logits = to_vocab(output)
+        top_indices = torch.argmax(logits, dim=-1)
+        top_indices_last_token = top_indices[-1:]
+        decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
+        if i in output_lens:
+            times_causal_decoder.append(time.time() - t)
 print(mem_len, max(output_lens), times_causal_decoder)
 # print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
 # for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
