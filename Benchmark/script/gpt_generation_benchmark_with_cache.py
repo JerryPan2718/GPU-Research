@@ -73,13 +73,13 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
             cache = None
             start.record()
             for i in range(1, output_len + 1):
-                decoded_embeddings = embedding(decoded_tokens)
+                decoded_embeddings = embedding(decoded_tokens).to(device=device)
                 if cache == None:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                 else:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                     # print(type(cache))
-                    cache = cache[:, -1 * mem_len:]
+                    cache = cache[:, -1 * mem_len:].to(device=device)
                     # cache = [c[-1 * mem_len:] for c in cache]
                     # print(type(cache))
                     print(str(i) + ": " + str(len(cache)) + "\n" + str(len(cache[0])))
@@ -125,6 +125,7 @@ for mem_len in mem_lens:
         with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
             with record_function("model_inference"):
                 gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
+                print("Finished -------------------------")
         print("######################################################################")
         print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
 
