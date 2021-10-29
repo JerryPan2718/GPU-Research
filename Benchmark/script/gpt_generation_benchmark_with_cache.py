@@ -3,12 +3,17 @@ from causal_transformer_decoder import (
     CausalTransformerDecoder,
     CausalTransformerDecoderLayer,
 )
+from tensorflow.keras.callbacks import TensorBoard
 import tensorflow as tf
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
+from torch.profiler import profile, record_function, ProfilerActivity
 import time
 import numpy as np
 import os
+
+writer = SummaryWriter(log_dir='logs')
 
 ################################# Configuration ########################################
 output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/20211028-causal-transformer-decoder-script/"
@@ -21,9 +26,9 @@ output_len = 1000
 # empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.005
 # mem_lens = [16]
-mem_lens = [16, 32, 64, 128, 256]
+mem_lens = [16]
 batch_sizes = [16]
-reps = 2
+reps = 1
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
 
@@ -68,13 +73,13 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
             cache = None
             start.record()
             for i in range(1, output_len + 1):
-                decoded_embeddings = embedding(decoded_tokens)
+                decoded_embeddings = embedding(decoded_tokens).to(device=device)
                 if cache == None:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                 else:
                     output, cache = causal_decoder(decoded_embeddings, None, cache)
                     # print(type(cache))
-                    cache = cache[:, -1 * mem_len:]
+                    cache = cache[:, -1 * mem_len:].to(device=device)
                     # cache = [c[-1 * mem_len:] for c in cache]
                     # print(type(cache))
                     print(str(i) + ": " + str(len(cache)) + "\n" + str(len(cache[0])))
@@ -127,4 +132,10 @@ for mem_len in mem_lens:
                 with_stack=True
         ) as profiler:
             gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            with record_function("model_inference"):
+                gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
+                print("Finished -------------------------")
         print("######################################################################")
+        print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+
