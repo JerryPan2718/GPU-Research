@@ -8,6 +8,7 @@ import tensorflow as tf
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
+from torch.profiler import profile, record_function, ProfilerActivity
 import time
 import numpy as np
 import os
@@ -27,7 +28,7 @@ fetch_cuda_stats_freq = 0.005
 # mem_lens = [16]
 mem_lens = [16]
 batch_sizes = [16]
-reps = 2
+reps = 1
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
 
@@ -121,14 +122,9 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 ################################### Main ###########################################
 for mem_len in mem_lens:
     for batch_size in batch_sizes:
-        with torch.profiler.profile(
-                schedule=torch.profiler.schedule(
-                    wait=2,
-                    warmup=2,
-                    active=6,
-                    repeat=1),
-                # on_trace_ready=tensorboard_trace_handler,
-                with_stack=True
-        ) as profiler:
-            gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            with record_function("model_inference"):
+                gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
         print("######################################################################")
+        print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+
