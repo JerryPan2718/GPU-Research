@@ -3,12 +3,16 @@ from causal_transformer_decoder import (
     CausalTransformerDecoder,
     CausalTransformerDecoderLayer,
 )
+from tensorflow.keras.callbacks import TensorBoard
 import tensorflow as tf
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 import time
 import numpy as np
 import os
+
+writer = SummaryWriter(log_dir='logs')
 
 ################################# Configuration ########################################
 output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/20211028-causal-transformer-decoder-script/"
@@ -21,7 +25,7 @@ output_len = 1000
 # empty_cache_freq = 0.1
 fetch_cuda_stats_freq = 0.005
 # mem_lens = [16]
-mem_lens = [16, 32, 64, 128, 256]
+mem_lens = [16]
 batch_sizes = [16]
 reps = 2
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -123,7 +127,7 @@ for mem_len in mem_lens:
                     warmup=2,
                     active=6,
                     repeat=1),
-                on_trace_ready=tensorboard_trace_handler,
+                # on_trace_ready=tensorboard_trace_handler,
                 with_stack=True
         ) as profiler:
             gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
