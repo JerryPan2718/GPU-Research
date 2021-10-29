@@ -13,9 +13,7 @@ import time
 import numpy as np
 import os
 
-writer = SummaryWriter(log_dir='logs')
-
-################################# Configuration ########################################
+################################# Configuration: TO CHANGE ########################################
 output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/20211028-causal-transformer-decoder-script/"
 hdim = 768
 nhead = 12
@@ -30,9 +28,14 @@ mem_lens = [16]
 batch_sizes = [16]
 reps = 1
 device = "cuda" if torch.cuda.is_available() else "cpu"
+use_amp = True
 print(f"Device used: {device}")
 
-################################### TO CHANGE ###########################################
+################################# Configuration: TO CHANGE ########################################
+writer = SummaryWriter(log_dir='logs')
+scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+
+
 def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps):
     times = []
     for _ in range(reps):
@@ -72,27 +75,28 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
         with torch.no_grad():
             cache = None
             start.record()
-            for i in range(1, output_len + 1):
-                decoded_embeddings = embedding(decoded_tokens).to(device=device)
-                if cache == None:
-                    output, cache = causal_decoder(decoded_embeddings, None, cache)
-                else:
-                    output, cache = causal_decoder(decoded_embeddings, None, cache)
-                    # print(type(cache))
-                    cache = cache[:, -1 * mem_len:].to(device=device)
-                    # cache = [c[-1 * mem_len:] for c in cache]
-                    # print(type(cache))
-                    print(str(i) + ": " + str(len(cache)) + "\n" + str(len(cache[0])))
-                    
-                logits = to_vocab(output)
-                top_indices = torch.argmax(logits, dim=-1)
-                top_indices_last_token = top_indices[-1:]
-                decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-                if i % int(fetch_cuda_stats_freq * output_len) == 0:
-                    cache_causal_decoder.append(torch.cuda.memory_allocated(device=device))
-                    torch.cuda.empty_cache()
-                # if i % int(empty_cache_freq * output_len) == 0:
-                #     torch.cuda.empty_cache()
+            with torch.cuda.amp.autocast(enabled=use_amp):
+                for i in range(1, output_len + 1):
+                    decoded_embeddings = embedding(decoded_tokens).to(device=device)
+                    if cache == None:
+                        output, cache = causal_decoder(decoded_embeddings, None, cache)
+                    else:
+                        output, cache = causal_decoder(decoded_embeddings, None, cache)
+                        # print(type(cache))
+                        cache = cache[:, -1 * mem_len:].to(device=device)
+                        # cache = [c[-1 * mem_len:] for c in cache]
+                        # print(type(cache))
+                        print(str(i) + ": " + str(len(cache)) + "\n" + str(len(cache[0])))
+                        
+                    logits = to_vocab(output)
+                    top_indices = torch.argmax(logits, dim=-1)
+                    top_indices_last_token = top_indices[-1:]
+                    decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
+                    if i % int(fetch_cuda_stats_freq * output_len) == 0:
+                        cache_causal_decoder.append(torch.cuda.memory_allocated(device=device))
+                        torch.cuda.empty_cache()
+                    # if i % int(empty_cache_freq * output_len) == 0:
+                    #     torch.cuda.empty_cache()
             end.record()
 
         # Waits for everything to finish running
