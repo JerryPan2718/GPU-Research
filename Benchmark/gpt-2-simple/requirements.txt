@@ -1,6 +1,0 @@
-tensorflow>=2.5.1
-regex
-requests
-tqdm
-numpy
-toposort
