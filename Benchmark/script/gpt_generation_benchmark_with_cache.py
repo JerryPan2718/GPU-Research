@@ -123,7 +123,7 @@ for mem_len in mem_lens:
                     warmup=2,
                     active=6,
                     repeat=1),
-                on_trace_ready=tensorboard_trace_handler,
+                # on_trace_ready=tensorboard_trace_handler,
                 with_stack=True
         ) as profiler:
             gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
