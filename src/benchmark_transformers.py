@@ -17,10 +17,10 @@ parser.add_argument("--bsz", default=8, type=int)
 parser.add_argument("--input_len_long_gen", default=500, type=int)
 args = parser.parse_args()
 
-hdim = 512
-nhead = 8
+hdim = 768
+nhead = 12
 dim_feedforward = hdim * 4
-num_layers = 6
+num_layers = 12
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Device used: {device}")
 
@@ -28,9 +28,9 @@ bsz = args.bsz
 vocab_size = args.vocab_size
 
 if args.type_generation == "short":
-    input_lens = [10, 25, 50, 100, 200, 300, 400, 500]
+    input_lens = [50, 100, 200, 300, 400, 500, 1000]
     output_lens = input_lens
-    n_experiments = [10, 10, 5, 1, 1, 1, 1, 1]
+    n_experiments = [10, 10, 5, 1, 1, 1, 1]
 elif args.type_generation == "long":
     output_lens = [500, 1000, 1500, 2000]
     input_lens = [args.input_len_long_gen] * len(output_lens)
