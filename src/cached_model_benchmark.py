@@ -126,16 +126,6 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 ################################### Main ###########################################
 for mem_len in mem_lens:
     for batch_size in batch_sizes:
-        with torch.profiler.profile(
-                schedule=torch.profiler.schedule(
-                    wait=2,
-                    warmup=2,
-                    active=6,
-                    repeat=1),
-                # on_trace_ready=tensorboard_trace_handler,
-                with_stack=True
-        ) as profiler:
-            gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
         with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
             with record_function("model_inference"):
                 gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
