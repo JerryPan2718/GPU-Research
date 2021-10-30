@@ -3,15 +3,13 @@ from causal_transformer_decoder import (
     CausalTransformerDecoder,
     CausalTransformerDecoderLayer,
 )
-from tensorflow.keras.callbacks import TensorBoard
-import tensorflow as tf
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
-from torch.profiler import profile, record_function, ProfilerActivity
 import time
 import numpy as np
 import os
+from torch.utils.tensorboard import SummaryWriter
+from torch.profiler import profile, record_function, ProfilerActivity
 
 ################################# Configuration: TO CHANGE ########################################
 output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/20211028-causal-transformer-decoder-script/"
