@@ -1,0 +1,2 @@
+TensorFlow(+Keras2) with Python3 (CUDA + and Intel MKL-DNN): source activate tensorflow2_p37
+`
