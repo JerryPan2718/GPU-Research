@@ -134,13 +134,13 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
     # avg_time = sum(times) / reps
     # Output text file
     # output_file_path = "/home/ubuntu/GPU-Research/Benchmark/"
-    file_name = output_file_path + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
-    print(file_name)
-    outF = open(file_name, "w")
+    # file_name = output_file_path + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
+    # print(file_name)
+    # outF = open(file_name, "w")
     # outF.write(str(avg_time/1000))
-    outF.write("\n")
-    outF.write(str(cache_causal_decoder))
-    outF.write("\n")
+    # outF.write("\n")
+    # outF.write(str(cache_causal_decoder))
+    # outF.write("\n")
 
 ################################### Main ###########################################
 for mem_len in mem_lens:
