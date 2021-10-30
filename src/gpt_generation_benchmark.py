@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.profiler import profile, record_function, ProfilerActivity
 
 ################################# Configuration: TO CHANGE ########################################
-output_file_path = "/home/ubuntu/GPU-Research/Benchmark/Experiments/20211028-causal-transformer-decoder-script/"
+output_file_path = "/home/ubuntu/GPU-Research/experiments/20211030-benchmark/"
 hdim = 768
 nhead = 12
 dim_feedforward = hdim * 4
@@ -83,6 +83,7 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
     past = None
     times_gpt = []
     t = time.time()
+    gpt_cache = []
     start.record()
     with torch.no_grad():
         with torch.cuda.amp.autocast(enabled=use_amp):
@@ -93,34 +94,45 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
                 context = token.unsqueeze(0)
                 if i in output_lens:
                     times_gpt.append(time.time() - t)
+                if i % int(fetch_cuda_stats_freq * output_len) == 0:
+                    gpt_cache.append(torch.cuda.memory_allocated(device=device))
+                    torch.cuda.empty_cache()
                 
     end.record()
-
     # Waits for everything to finish running
     torch.cuda.synchronize()
     gpt_times.append(start.elapsed_time(end))
+
+    file_name = output_file_path + " GPT-2 " + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
+    print(file_name)
+    outF = open(file_name, "w")
+    outF.write(str(sum(gpt_times) / reps / 1000))
+    outF.write("\n")
+    outF.write(str(gpt_cache))
+    outF.write("\n")
 
     # Causal decoder inference
     print("Inference for Causal Decoder...")
     first_token = torch.zeros((1, batch_size)).long().to(device=device)
     decoded_tokens = first_token
     t = time.time()
-    cache_causal_decoder = []
+    causal_decoder_cache = []
     times_causal_decoder = []
     with torch.no_grad():
         cache = None
-        for i in range(1, output_lens[-1] + 1):
-            decoded_embeddings = embedding(decoded_tokens)
-            output, cache = causal_decoder(decoded_embeddings, None, cache)
-            logits = to_vocab(output)
-            top_indices = torch.argmax(logits, dim=-1)
-            top_indices_last_token = top_indices[-1:]
-            decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
-            if i in output_lens:
-                times_causal_decoder.append(time.time() - t)
-            if i % int(fetch_cuda_stats_freq * output_len) == 0:
-                        cache_causal_decoder.append(torch.cuda.memory_allocated(device=device))
-                        torch.cuda.empty_cache()
+        with torch.cuda.amp.autocast(enabled=use_amp):
+            for i in range(1, output_lens[-1] + 1):
+                decoded_embeddings = embedding(decoded_tokens)
+                output, cache = causal_decoder(decoded_embeddings, None, cache)
+                logits = to_vocab(output)
+                top_indices = torch.argmax(logits, dim=-1)
+                top_indices_last_token = top_indices[-1:]
+                decoded_tokens = torch.cat([decoded_tokens, top_indices_last_token], dim=0)
+                if i in output_lens:
+                    times_causal_decoder.append(time.time() - t)
+                if i % int(fetch_cuda_stats_freq * output_len) == 0:
+                    causal_decoder_cache.append(torch.cuda.memory_allocated(device=device))
+                    torch.cuda.empty_cache()
 
     print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
     for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
@@ -133,14 +145,13 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 
     # avg_time = sum(times) / reps
     # Output text file
-    # output_file_path = "/home/ubuntu/GPU-Research/Benchmark/"
-    # file_name = output_file_path + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
-    # print(file_name)
-    # outF = open(file_name, "w")
-    # outF.write(str(avg_time/1000))
-    # outF.write("\n")
-    # outF.write(str(cache_causal_decoder))
-    # outF.write("\n")
+    file_name = output_file_path + " causal_decoder " + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
+    print(file_name)
+    outF = open(file_name, "w")
+    outF.write(str(sum(times_causal_decoder) / reps / 1000))
+    outF.write("\n")
+    outF.write(str(causal_decoder_cache))
+    outF.write("\n")
 
 ################################### Main ###########################################
 for mem_len in mem_lens:
