@@ -141,3 +141,14 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
     outF.write("\n")
     outF.write(str(cache_causal_decoder))
     outF.write("\n")
+
+################################### Main ###########################################
+for mem_len in mem_lens:
+    for batch_size in batch_sizes:
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+            with record_function("model_inference"):
+                gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, fetch_cuda_stats_freq, mem_len, batch_size, reps)
+                print("Finished -------------------------")
+        print("######################################################################")
+        print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+        
