@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2018 The Google AI Language Team Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,18 +14,18 @@
 # limitations under the License.
 
 
-from transformers import DistilBertTokenizer, DistilBertTokenizerFast
-from transformers.testing_utils import require_tokenizers, slow
+from transformers.tokenization_distilbert import DistilBertTokenizer
 
 from .test_tokenization_bert import BertTokenizationTest
+from .utils import slow
 
 
-@require_tokenizers
 class DistilBertTokenizationTest(BertTokenizationTest):
 
     tokenizer_class = DistilBertTokenizer
-    rust_tokenizer_class = DistilBertTokenizerFast
-    test_rust_tokenizer = True
+
+    def get_tokenizer(self, **kwargs):
+        return DistilBertTokenizer.from_pretrained(self.tmpdirname, **kwargs)
 
     @slow
     def test_sequence_builders(self):

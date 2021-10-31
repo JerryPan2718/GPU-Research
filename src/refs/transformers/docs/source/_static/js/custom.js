@@ -1,56 +1,3 @@
-// These two things need to be updated at each release for the version selector.
-// Last stable version
-const stableVersion = "v4.11.3"
-// Dictionary doc folder to label. The last stable version should have an empty key.
-const versionMapping = {
-    "master": "master",
-    "": "v4.11.0/v4.11.1/v4.11.2/v4.11.3 (stable)",
-    "v4.10.1": "v4.10.0/v4.10.1",
-    "v4.9.2": "v4.9.0/v4.9.1/v4.9.2",
-    "v4.8.2": "v4.8.0/v4.8.1/v4.8.2",
-    "v4.7.0": "v4.7.0",
-    "v4.6.0": "v4.6.0",
-    "v4.5.1": "v4.5.0/v4.5.1",
-    "v4.4.2": "v4.4.0/v4.4.1/v4.4.2",
-    "v4.3.3": "v4.3.0/v4.3.1/v4.3.2/v4.3.3",
-    "v4.2.2": "v4.2.0/v4.2.1/v4.2.2",
-    "v4.1.1": "v4.1.0/v4.1.1",
-    "v4.0.1": "v4.0.0/v4.0.1",
-    "v3.5.1": "v3.5.0/v3.5.1",
-    "v3.4.0": "v3.4.0",
-    "v3.3.1": "v3.3.0/v3.3.1",
-    "v3.2.0": "v3.2.0",
-    "v3.1.0": "v3.1.0",
-    "v3.0.2": "v3.0.0/v3.0.1/v3.0.2",
-    "v2.11.0": "v2.11.0",
-    "v2.10.0": "v2.10.0",
-    "v2.9.1": "v2.9.0/v2.9.1",
-    "v2.8.0": "v2.8.0",
-    "v2.7.0": "v2.7.0",
-    "v2.6.0": "v2.6.0",
-    "v2.5.1": "v2.5.0/v2.5.1",
-    "v2.4.0": "v2.4.0/v2.4.1",
-    "v2.3.0": "v2.3.0",
-    "v2.2.0": "v2.2.0/v2.2.1/v2.2.2",
-    "v2.1.1": "v2.1.1",
-    "v2.0.0": "v2.0.0",
-    "v1.2.0": "v1.2.0",
-    "v1.1.0": "v1.1.0",
-    "v1.0.0": "v1.0.0"
-}
-// The page that have a notebook and therefore should have the open in colab badge.
-const hasNotebook = [
-    "benchmarks",
-    "custom_datasets",
-    "multilingual",
-    "perplexity",
-    "preprocessing",
-    "quicktour",
-    "task_summary",
-    "tokenizer_summary",
-    "training"
-];
-
 function addIcon() {
     const huggingFaceLogo = "https://huggingface.co/landing/assets/transformers-docs/huggingface_logo.svg";
     const image = document.createElement("img");
@@ -69,7 +16,7 @@ function addIcon() {
 function addCustomFooter() {
     const customFooter = document.createElement("div");
     const questionOrIssue = document.createElement("div");
-    questionOrIssue.innerHTML = "Stuck? Read our <a href='https://huggingface.co/blog'>Blog posts</a> or <a href='https://github.com/huggingface/transformers'>Create an issue</a>";
+    questionOrIssue.innerHTML = "Stuck? Read our <a href='https://medium.com/huggingface'>Blog posts</a> or <a href='https://github.com/huggingface/transformers'>Create an issue</a>";
     customFooter.appendChild(questionOrIssue);
     customFooter.classList.add("footer");
 
@@ -111,94 +58,11 @@ function addGithubButton() {
     document.querySelector(".wy-side-nav-search .icon-home").insertAdjacentHTML('afterend', div);
 }
 
-function addColabLink() {
-    const parts = location.toString().split('/');
-    const pageName = parts[parts.length - 1].split(".")[0];
-
-    if (hasNotebook.includes(pageName)) {
-        const baseURL = "https://colab.research.google.com/github/huggingface/notebooks/blob/master/transformers_doc/"
-        const linksColab = `
-        <div class="colab-dropdown">
-            <img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
-            <div class="colab-dropdown-content">
-                <button onclick=" window.open('${baseURL}${pageName}.ipynb')">Mixed</button>
-                <button onclick=" window.open('${baseURL}pytorch/${pageName}.ipynb')">PyTorch</button>
-                <button onclick=" window.open('${baseURL}tensorflow/${pageName}.ipynb')">TensorFlow</button>
-            </div>
-        </div>`
-        const leftMenu = document.querySelector(".wy-breadcrumbs-aside")
-        leftMenu.innerHTML = linksColab + '\n' + leftMenu.innerHTML
-    }
-}
-
-function addVersionControl() {
-    // To grab the version currently in view, we parse the url
-    const parts = location.toString().split('/');
-    let versionIndex = parts.length - 2;
-    // Index page may not have a last part with filename.html so we need to go up
-    if (parts[parts.length - 1] != "" && ! parts[parts.length - 1].match(/\.html/)) {
-        versionIndex = parts.length - 1;
-    }
-    // Main classes and models are nested so we need to go deeper
-    else if (parts[versionIndex] == "main_classes" || parts[versionIndex] == "model_doc" || parts[versionIndex] == "internal") {
-        versionIndex = versionIndex - 1;
-    } 
-    const version = parts[versionIndex];
-
-    // Menu with all the links,
-    const versionMenu = document.createElement("div");
-
-    const htmlLines = [];
-    for (const [key, value] of Object.entries(versionMapping)) {
-        let baseUrlIndex = (version == "transformers") ? versionIndex + 1: versionIndex;
-        var urlParts = parts.slice(0, baseUrlIndex);
-        if (key != "") {
-            urlParts = urlParts.concat([key]);
-        }
-        urlParts = urlParts.concat(parts.slice(versionIndex+1));
-        htmlLines.push(`<a href="${urlParts.join('/')}">${value}</a>`);
-    }
-
-    versionMenu.classList.add("version-dropdown");
-    versionMenu.innerHTML = htmlLines.join('\n');
-    
-    // Button for version selection
-    const versionButton = document.createElement("div");
-    versionButton.classList.add("version-button");
-    let label = (version == "transformers") ? stableVersion : version
-    versionButton.innerText = label.concat(" ▼");
-
-    // Toggle the menu when we click on the button
-    versionButton.addEventListener("click", () => {
-        versionMenu.classList.toggle("version-show");
-    });
-
-    // Hide the menu when we click elsewhere
-    window.addEventListener("click", (event) => {
-        if (event.target != versionButton){
-            versionMenu.classList.remove('version-show');
-        }
-    });
-
-    // Container
-    const div = document.createElement("div");
-    div.appendChild(versionButton);
-    div.appendChild(versionMenu);
-    div.style.paddingTop = '25px';
-    div.style.backgroundColor = '#6670FF';
-    div.style.display = 'block';
-    div.style.textAlign = 'center';
-
-    const scrollDiv = document.querySelector(".wy-side-scroll");
-    scrollDiv.insertBefore(div, scrollDiv.children[1]);
-}
-
 function addHfMenu() {
     const div = `
     <div class="menu">
         <a href="/welcome">🔥 Sign in</a>
         <a href="/models">🚀 Models</a>
-        <a href="http://discuss.huggingface.co">💬 Forum</a>
     </div>
     `;
     document.body.insertAdjacentHTML('afterbegin', div);
@@ -208,8 +72,6 @@ function platformToggle() {
     const codeBlocks = Array.from(document.getElementsByClassName("highlight"));
     const pytorchIdentifier = "## PYTORCH CODE";
     const tensorflowIdentifier = "## TENSORFLOW CODE";
-
-    const promptSpanIdentifier = `<span class="gp">&gt;&gt;&gt; </span>`
     const pytorchSpanIdentifier = `<span class="c1">${pytorchIdentifier}</span>`;
     const tensorflowSpanIdentifier = `<span class="c1">${tensorflowIdentifier}</span>`;
 
@@ -222,22 +84,10 @@ function platformToggle() {
         let tensorflowSpans;
 
         if(pytorchSpanPosition < tensorflowSpanPosition){
-            const isPrompt = spans.slice(
-                spans.indexOf(tensorflowSpanIdentifier) - promptSpanIdentifier.length,
-                spans.indexOf(tensorflowSpanIdentifier)
-            ) == promptSpanIdentifier;
-            const finalTensorflowSpanPosition = isPrompt ? tensorflowSpanPosition - promptSpanIdentifier.length : tensorflowSpanPosition;
-
-            pytorchSpans = spans.slice(pytorchSpanPosition + pytorchSpanIdentifier.length + 1, finalTensorflowSpanPosition);
+            pytorchSpans = spans.slice(pytorchSpanPosition + pytorchSpanIdentifier.length + 1, tensorflowSpanPosition);
             tensorflowSpans = spans.slice(tensorflowSpanPosition + tensorflowSpanIdentifier.length + 1, spans.length);
         }else{
-            const isPrompt = spans.slice(
-                spans.indexOf(pytorchSpanIdentifier) - promptSpanIdentifier.length,
-                spans.indexOf(pytorchSpanIdentifier)
-            ) == promptSpanIdentifier;
-            const finalPytorchSpanPosition = isPrompt ? pytorchSpanPosition - promptSpanIdentifier.length : pytorchSpanPosition;
-
-            tensorflowSpans = spans.slice(tensorflowSpanPosition + tensorflowSpanIdentifier.length + 1, finalPytorchSpanPosition);
+            tensorflowSpans = spans.slice(tensorflowSpanPosition + tensorflowSpanIdentifier.length + 1, pytorchSpanPosition);
             pytorchSpans = spans.slice(pytorchSpanPosition + pytorchSpanIdentifier.length + 1, spans.length);
         }
 
@@ -250,11 +100,9 @@ function platformToggle() {
 
     const createFrameworkButtons = sample => {
             const pytorchButton = document.createElement("button");
-            pytorchButton.classList.add('pytorch-button')
             pytorchButton.innerText = "PyTorch";
 
             const tensorflowButton = document.createElement("button");
-            tensorflowButton.classList.add('tensorflow-button')
             tensorflowButton.innerText = "TensorFlow";
 
             const selectorDiv = document.createElement("div");
@@ -269,36 +117,22 @@ function platformToggle() {
             tensorflowButton.classList.remove("selected");
 
             pytorchButton.addEventListener("click", () => {
-                for(const codeBlock of updatedCodeBlocks){
-                    codeBlock.element.innerHTML = codeBlock.pytorchSample;
-                }
-                Array.from(document.getElementsByClassName('pytorch-button')).forEach(button => {
-                    button.classList.add("selected");
-                })
-                Array.from(document.getElementsByClassName('tensorflow-button')).forEach(button => {
-                    button.classList.remove("selected");
-                })
+                sample.element.innerHTML = sample.pytorchSample;
+                pytorchButton.classList.add("selected");
+                tensorflowButton.classList.remove("selected");
             });
             tensorflowButton.addEventListener("click", () => {
-                for(const codeBlock of updatedCodeBlocks){
-                    codeBlock.element.innerHTML = codeBlock.tensorflowSample;
-                }
-                Array.from(document.getElementsByClassName('tensorflow-button')).forEach(button => {
-                    button.classList.add("selected");
-                })
-                Array.from(document.getElementsByClassName('pytorch-button')).forEach(button => {
-                    button.classList.remove("selected");
-                })
+               sample.element.innerHTML = sample.tensorflowSample;
+                tensorflowButton.classList.add("selected");
+                pytorchButton.classList.remove("selected");
             });
         };
 
-    const updatedCodeBlocks = codeBlocks
+    codeBlocks
         .map(element => {return {element: element.firstChild, innerText: element.innerText}})
         .filter(codeBlock => codeBlock.innerText.includes(pytorchIdentifier) && codeBlock.innerText.includes(tensorflowIdentifier))
         .map(getFrameworkSpans)
-
-    updatedCodeBlocks
-        .forEach(createFrameworkButtons)
+        .forEach(createFrameworkButtons);
 }
 
 
@@ -315,12 +149,10 @@ function parseGithubButtons (){"use strict";var e=window.document,t=e.location,o
 
 function onLoad() {
     addIcon();
-    addVersionControl();
     addCustomFooter();
     addGithubButton();
     parseGithubButtons();
     addHfMenu();
-    addColabLink();
     platformToggle();
 }
 

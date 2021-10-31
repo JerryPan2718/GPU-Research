@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2018 The Google AI Language Team Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,124 +13,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-import os
-import tempfile
+
+import logging
 import unittest
 
-from transformers import BertConfig, is_torch_available
-from transformers.models.auto.configuration_auto import CONFIG_MAPPING
-from transformers.testing_utils import (
-    DUMMY_UNKNOWN_IDENTIFIER,
-    SMALL_MODEL_IDENTIFIER,
-    require_scatter,
-    require_torch,
-    slow,
-)
+from transformers import is_torch_available
 
-from .test_modeling_bert import BertModelTester
+from .utils import DUMMY_UNKWOWN_IDENTIFIER, SMALL_MODEL_IDENTIFIER, require_torch, slow
 
 
 if is_torch_available():
-    import torch
-
     from transformers import (
         AutoConfig,
+        BertConfig,
         AutoModel,
-        AutoModelForCausalLM,
-        AutoModelForMaskedLM,
+        BertModel,
         AutoModelForPreTraining,
-        AutoModelForQuestionAnswering,
-        AutoModelForSeq2SeqLM,
-        AutoModelForSequenceClassification,
-        AutoModelForTableQuestionAnswering,
-        AutoModelForTokenClassification,
+        BertForPreTraining,
         AutoModelWithLMHead,
         BertForMaskedLM,
-        BertForPreTraining,
-        BertForQuestionAnswering,
-        BertForSequenceClassification,
-        BertForTokenClassification,
-        BertModel,
-        FunnelBaseModel,
-        FunnelModel,
-        GPT2Config,
-        GPT2LMHeadModel,
-        PreTrainedModel,
         RobertaForMaskedLM,
-        T5Config,
-        T5ForConditionalGeneration,
-        TapasConfig,
-        TapasForQuestionAnswering,
+        AutoModelForSequenceClassification,
+        BertForSequenceClassification,
+        AutoModelForQuestionAnswering,
+        BertForQuestionAnswering,
     )
-    from transformers.models.auto.modeling_auto import (
-        MODEL_FOR_CAUSAL_LM_MAPPING,
-        MODEL_FOR_MASKED_LM_MAPPING,
+    from transformers.modeling_bert import BERT_PRETRAINED_MODEL_ARCHIVE_MAP
+    from transformers.modeling_auto import (
+        MODEL_MAPPING,
         MODEL_FOR_PRETRAINING_MAPPING,
         MODEL_FOR_QUESTION_ANSWERING_MAPPING,
-        MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING,
         MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING,
-        MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING,
         MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING,
-        MODEL_MAPPING,
         MODEL_WITH_LM_HEAD_MAPPING,
     )
-    from transformers.models.bert.modeling_bert import BERT_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.gpt2.modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.t5.modeling_t5 import T5_PRETRAINED_MODEL_ARCHIVE_LIST
-    from transformers.models.tapas.modeling_tapas import TAPAS_PRETRAINED_MODEL_ARCHIVE_LIST
-
-
-class NewModelConfig(BertConfig):
-    model_type = "new-model"
-
-
-if is_torch_available():
-
-    class NewModel(BertModel):
-        config_class = NewModelConfig
-
-    class FakeModel(PreTrainedModel):
-        config_class = BertConfig
-        base_model_prefix = "fake"
-
-        def __init__(self, config):
-            super().__init__(config)
-            self.linear = torch.nn.Linear(config.hidden_size, config.hidden_size)
-
-        def forward(self, x):
-            return self.linear(x)
-
-        def _init_weights(self, module):
-            pass
-
-
-# Make sure this is synchronized with the model above.
-FAKE_MODEL_CODE = """
-import torch
-from transformers import BertConfig, PreTrainedModel
-
-class FakeModel(PreTrainedModel):
-    config_class = BertConfig
-    base_model_prefix = "fake"
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.linear = torch.nn.Linear(config.hidden_size, config.hidden_size)
-
-    def forward(self, x):
-        return self.linear(x)
-
-    def _init_weights(self, module):
-        pass
-"""
 
 
 @require_torch
 class AutoModelTest(unittest.TestCase):
     @slow
     def test_model_from_pretrained(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+        logging.basicConfig(level=logging.INFO)
+        for model_name in list(BERT_PRETRAINED_MODEL_ARCHIVE_MAP.keys())[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
@@ -139,15 +63,13 @@ class AutoModelTest(unittest.TestCase):
             model, loading_info = AutoModel.from_pretrained(model_name, output_loading_info=True)
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertModel)
-
-            self.assertEqual(len(loading_info["missing_keys"]), 0)
-            self.assertEqual(len(loading_info["unexpected_keys"]), 8)
-            self.assertEqual(len(loading_info["mismatched_keys"]), 0)
-            self.assertEqual(len(loading_info["error_msgs"]), 0)
+            for value in loading_info.values():
+                self.assertEqual(len(value), 0)
 
     @slow
     def test_model_for_pretraining_from_pretrained(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+        logging.basicConfig(level=logging.INFO)
+        for model_name in list(BERT_PRETRAINED_MODEL_ARCHIVE_MAP.keys())[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
@@ -156,15 +78,13 @@ class AutoModelTest(unittest.TestCase):
             model, loading_info = AutoModelForPreTraining.from_pretrained(model_name, output_loading_info=True)
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForPreTraining)
-            # Only one value should not be initialized and in the missing keys.
-            missing_keys = loading_info.pop("missing_keys")
-            self.assertListEqual(["cls.predictions.decoder.bias"], missing_keys)
-            for key, value in loading_info.items():
+            for value in loading_info.values():
                 self.assertEqual(len(value), 0)
 
     @slow
     def test_lmhead_model_from_pretrained(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+        logging.basicConfig(level=logging.INFO)
+        for model_name in list(BERT_PRETRAINED_MODEL_ARCHIVE_MAP.keys())[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
@@ -175,44 +95,9 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsInstance(model, BertForMaskedLM)
 
     @slow
-    def test_model_for_causal_lm(self):
-        for model_name in GPT2_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, GPT2Config)
-
-            model = AutoModelForCausalLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForCausalLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, GPT2LMHeadModel)
-
-    @slow
-    def test_model_for_masked_lm(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
-
-            model = AutoModelForMaskedLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForMaskedLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForMaskedLM)
-
-    @slow
-    def test_model_for_encoder_decoder_lm(self):
-        for model_name in T5_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, T5Config)
-
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-            model, loading_info = AutoModelForSeq2SeqLM.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, T5ForConditionalGeneration)
-
-    @slow
     def test_sequence_classification_model_from_pretrained(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+        logging.basicConfig(level=logging.INFO)
+        for model_name in list(BERT_PRETRAINED_MODEL_ARCHIVE_MAP.keys())[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
@@ -224,9 +109,10 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForSequenceClassification)
 
-    @slow
+    # @slow
     def test_question_answering_model_from_pretrained(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
+        logging.basicConfig(level=logging.INFO)
+        for model_name in list(BERT_PRETRAINED_MODEL_ARCHIVE_MAP.keys())[:1]:
             config = AutoConfig.from_pretrained(model_name)
             self.assertIsNotNone(config)
             self.assertIsInstance(config, BertConfig)
@@ -236,59 +122,19 @@ class AutoModelTest(unittest.TestCase):
             self.assertIsNotNone(model)
             self.assertIsInstance(model, BertForQuestionAnswering)
 
-    @slow
-    @require_scatter
-    def test_table_question_answering_model_from_pretrained(self):
-        for model_name in TAPAS_PRETRAINED_MODEL_ARCHIVE_LIST[5:6]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, TapasConfig)
-
-            model = AutoModelForTableQuestionAnswering.from_pretrained(model_name)
-            model, loading_info = AutoModelForTableQuestionAnswering.from_pretrained(
-                model_name, output_loading_info=True
-            )
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, TapasForQuestionAnswering)
-
-    @slow
-    def test_token_classification_model_from_pretrained(self):
-        for model_name in BERT_PRETRAINED_MODEL_ARCHIVE_LIST[:1]:
-            config = AutoConfig.from_pretrained(model_name)
-            self.assertIsNotNone(config)
-            self.assertIsInstance(config, BertConfig)
-
-            model = AutoModelForTokenClassification.from_pretrained(model_name)
-            model, loading_info = AutoModelForTokenClassification.from_pretrained(model_name, output_loading_info=True)
-            self.assertIsNotNone(model)
-            self.assertIsInstance(model, BertForTokenClassification)
-
     def test_from_pretrained_identifier(self):
+        logging.basicConfig(level=logging.INFO)
         model = AutoModelWithLMHead.from_pretrained(SMALL_MODEL_IDENTIFIER)
         self.assertIsInstance(model, BertForMaskedLM)
-        self.assertEqual(model.num_parameters(), 14410)
-        self.assertEqual(model.num_parameters(only_trainable=True), 14410)
+        self.assertEqual(model.num_parameters(), 14830)
+        self.assertEqual(model.num_parameters(only_trainable=True), 14830)
 
     def test_from_identifier_from_model_type(self):
-        model = AutoModelWithLMHead.from_pretrained(DUMMY_UNKNOWN_IDENTIFIER)
+        logging.basicConfig(level=logging.INFO)
+        model = AutoModelWithLMHead.from_pretrained(DUMMY_UNKWOWN_IDENTIFIER)
         self.assertIsInstance(model, RobertaForMaskedLM)
-        self.assertEqual(model.num_parameters(), 14410)
-        self.assertEqual(model.num_parameters(only_trainable=True), 14410)
-
-    def test_from_pretrained_with_tuple_values(self):
-        # For the auto model mapping, FunnelConfig has two models: FunnelModel and FunnelBaseModel
-        model = AutoModel.from_pretrained("sgugger/funnel-random-tiny")
-        self.assertIsInstance(model, FunnelModel)
-
-        config = copy.deepcopy(model.config)
-        config.architectures = ["FunnelBaseModel"]
-        model = AutoModel.from_config(config)
-        self.assertIsInstance(model, FunnelBaseModel)
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            model.save_pretrained(tmp_dir)
-            model = AutoModel.from_pretrained(tmp_dir)
-            self.assertIsInstance(model, FunnelBaseModel)
+        self.assertEqual(model.num_parameters(), 14830)
+        self.assertEqual(model.num_parameters(only_trainable=True), 14830)
 
     def test_parents_and_children_in_mappings(self):
         # Test that the children are placed before the parents in the mappings, as the `instanceof` will be triggered
@@ -298,94 +144,17 @@ class AutoModelTest(unittest.TestCase):
             MODEL_MAPPING,
             MODEL_FOR_PRETRAINING_MAPPING,
             MODEL_FOR_QUESTION_ANSWERING_MAPPING,
-            MODEL_FOR_TABLE_QUESTION_ANSWERING_MAPPING,
             MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING,
             MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING,
             MODEL_WITH_LM_HEAD_MAPPING,
-            MODEL_FOR_CAUSAL_LM_MAPPING,
-            MODEL_FOR_MASKED_LM_MAPPING,
-            MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING,
         )
 
         for mapping in mappings:
             mapping = tuple(mapping.items())
             for index, (child_config, child_model) in enumerate(mapping[1:]):
                 for parent_config, parent_model in mapping[: index + 1]:
-                    assert not issubclass(
-                        child_config, parent_config
-                    ), f"{child_config.__name__} is child of {parent_config.__name__}"
-
-                    # Tuplify child_model and parent_model since some of them could be tuples.
-                    if not isinstance(child_model, (list, tuple)):
-                        child_model = (child_model,)
-                    if not isinstance(parent_model, (list, tuple)):
-                        parent_model = (parent_model,)
-
-                    for child, parent in [(a, b) for a in child_model for b in parent_model]:
-                        assert not issubclass(child, parent), f"{child.__name__} is child of {parent.__name__}"
-
-    def test_from_pretrained_dynamic_model(self):
-        config = BertConfig(
-            vocab_size=99, hidden_size=32, num_hidden_layers=5, num_attention_heads=4, intermediate_size=37
-        )
-        config.auto_map = {"AutoModel": "modeling.FakeModel"}
-        model = FakeModel(config)
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            model.save_pretrained(tmp_dir)
-            with open(os.path.join(tmp_dir, "modeling.py"), "w") as f:
-                f.write(FAKE_MODEL_CODE)
-
-            new_model = AutoModel.from_pretrained(tmp_dir, trust_remote_code=True)
-            for p1, p2 in zip(model.parameters(), new_model.parameters()):
-                self.assertTrue(torch.equal(p1, p2))
-
-    def test_new_model_registration(self):
-        AutoConfig.register("new-model", NewModelConfig)
-
-        auto_classes = [
-            AutoModel,
-            AutoModelForCausalLM,
-            AutoModelForMaskedLM,
-            AutoModelForPreTraining,
-            AutoModelForQuestionAnswering,
-            AutoModelForSequenceClassification,
-            AutoModelForTokenClassification,
-        ]
-
-        try:
-            for auto_class in auto_classes:
-                with self.subTest(auto_class.__name__):
-                    # Wrong config class will raise an error
-                    with self.assertRaises(ValueError):
-                        auto_class.register(BertConfig, NewModel)
-                    auto_class.register(NewModelConfig, NewModel)
-                    # Trying to register something existing in the Transformers library will raise an error
-                    with self.assertRaises(ValueError):
-                        auto_class.register(BertConfig, BertModel)
-
-                    # Now that the config is registered, it can be used as any other config with the auto-API
-                    tiny_config = BertModelTester(self).get_config()
-                    config = NewModelConfig(**tiny_config.to_dict())
-                    model = auto_class.from_config(config)
-                    self.assertIsInstance(model, NewModel)
-
-                    with tempfile.TemporaryDirectory() as tmp_dir:
-                        model.save_pretrained(tmp_dir)
-                        new_model = auto_class.from_pretrained(tmp_dir)
-                        self.assertIsInstance(new_model, NewModel)
-
-        finally:
-            if "new-model" in CONFIG_MAPPING._extra_content:
-                del CONFIG_MAPPING._extra_content["new-model"]
-            for mapping in (
-                MODEL_MAPPING,
-                MODEL_FOR_PRETRAINING_MAPPING,
-                MODEL_FOR_QUESTION_ANSWERING_MAPPING,
-                MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING,
-                MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING,
-                MODEL_FOR_CAUSAL_LM_MAPPING,
-                MODEL_FOR_MASKED_LM_MAPPING,
-            ):
-                if NewModelConfig in mapping._extra_content:
-                    del mapping._extra_content[NewModelConfig]
+                    with self.subTest(
+                        msg="Testing if {} is child of {}".format(child_config.__name__, parent_config.__name__)
+                    ):
+                        self.assertFalse(issubclass(child_config, parent_config))
+                        self.assertFalse(issubclass(child_model, parent_model))

@@ -1,9 +1,8 @@
 ---
 name: "\U0001F4DA Migration from pytorch-pretrained-bert or pytorch-transformers"
-about: Report a problem when migrating from pytorch-pretrained-bert or pytorch-transformers
-  to transformers
+about: Report a problem when migrating from pytorch-pretrained-bert or pytorch-transformers to transformers
 title: ''
-labels: Migration
+labels: ''
 assignees: ''
 
 ---

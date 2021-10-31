@@ -8,12 +8,6 @@ __pycache__/
 # C extensions
 *.so
 
-# tests and logs
-tests/fixtures/cached_*_text.txt
-logs/
-lightning_logs/
-lang_code_data/
-
 # Distribution / packaging
 .Python
 build/
@@ -122,7 +116,6 @@ dmypy.json
 .pyre/
 
 # vscode
-.vs
 .vscode
 
 # Pycharm
@@ -132,15 +125,12 @@ dmypy.json
 tensorflow_code
 
 # Models
+models
 proc_data
 
 # examples
 runs
-/runs_old
-/wandb
-/examples/runs
-/examples/**/*.args
-/examples/rag/sweep
+examples/runs
 
 # data
 /data
@@ -155,9 +145,3 @@ debug.env
 
 #ctags
 tags
-
-# pre-commit
-.pre-commit*
-
-# .lock
-*.lock

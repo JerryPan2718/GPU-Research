@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2018 The Google AI Language Team Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,29 +15,24 @@
 
 
 import os
-import pickle
 import unittest
 
-from transformers import AutoTokenizer
-from transformers.models.bert_japanese.tokenization_bert_japanese import (
+from transformers.tokenization_bert import WordpieceTokenizer
+from transformers.tokenization_bert_japanese import (
     VOCAB_FILES_NAMES,
     BertJapaneseTokenizer,
-    BertTokenizer,
     CharacterTokenizer,
     MecabTokenizer,
-    WordpieceTokenizer,
 )
-from transformers.testing_utils import custom_tokenizers
 
 from .test_tokenization_common import TokenizerTesterMixin
+from .utils import custom_tokenizers, slow
 
 
 @custom_tokenizers
 class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     tokenizer_class = BertJapaneseTokenizer
-    test_rust_tokenizer = False
-    space_between_special_tokens = True
 
     def setUp(self):
         super().setUp()
@@ -65,25 +60,13 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         with open(self.vocab_file, "w", encoding="utf-8") as vocab_writer:
             vocab_writer.write("".join([x + "\n" for x in vocab_tokens]))
 
-    def get_input_output_texts(self, tokenizer):
+    def get_tokenizer(self, **kwargs):
+        return BertJapaneseTokenizer.from_pretrained(self.tmpdirname, **kwargs)
+
+    def get_input_output_texts(self):
         input_text = "こんにちは、世界。 \nこんばんは、世界。"
         output_text = "こんにちは 、 世界 。 こんばんは 、 世界 。"
         return input_text, output_text
-
-    def get_clean_sequence(self, tokenizer):
-        input_text, output_text = self.get_input_output_texts(tokenizer)
-        ids = tokenizer.encode(output_text, add_special_tokens=False)
-        text = tokenizer.decode(ids, clean_up_tokenization_spaces=False)
-        return text, ids
-
-    def test_pretokenized_inputs(self):
-        pass  # TODO add if relevant
-
-    def test_maximum_encoding_length_pair_input(self):
-        pass  # TODO add if relevant
-
-    def test_maximum_encoding_length_single_input(self):
-        pass  # TODO add if relevant
 
     def test_full_tokenizer(self):
         tokenizer = self.tokenizer_class(self.vocab_file)
@@ -92,80 +75,24 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         self.assertListEqual(tokens, ["こんにちは", "、", "世界", "。", "こん", "##ばんは", "、", "世界", "。"])
         self.assertListEqual(tokenizer.convert_tokens_to_ids(tokens), [3, 12, 10, 14, 4, 9, 12, 10, 14])
 
-    def test_pickle_mecab_tokenizer(self):
-        tokenizer = self.tokenizer_class(self.vocab_file, word_tokenizer_type="mecab")
-        self.assertIsNotNone(tokenizer)
-
-        text = "こんにちは、世界。\nこんばんは、世界。"
-        tokens = tokenizer.tokenize(text)
-        self.assertListEqual(tokens, ["こんにちは", "、", "世界", "。", "こん", "##ばんは", "、", "世界", "。"])
-        self.assertListEqual(tokenizer.convert_tokens_to_ids(tokens), [3, 12, 10, 14, 4, 9, 12, 10, 14])
-
-        filename = os.path.join(self.tmpdirname, "tokenizer.bin")
-        with open(filename, "wb") as handle:
-            pickle.dump(tokenizer, handle)
-
-        with open(filename, "rb") as handle:
-            tokenizer_new = pickle.load(handle)
-
-        tokens_loaded = tokenizer_new.tokenize(text)
-
-        self.assertListEqual(tokens, tokens_loaded)
-
-    def test_mecab_tokenizer_ipadic(self):
-        tokenizer = MecabTokenizer(mecab_dic="ipadic")
+    def test_mecab_tokenizer(self):
+        tokenizer = MecabTokenizer()
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
             ["アップルストア", "で", "iPhone", "8", "が", "発売", "さ", "れ", "た", "。"],
         )
 
-    def test_mecab_tokenizer_unidic_lite(self):
-        try:
-            tokenizer = MecabTokenizer(mecab_dic="unidic_lite")
-        except ModuleNotFoundError:
-            return
-
-        self.assertListEqual(
-            tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["アップル", "ストア", "で", "iPhone", "8", "が", "発売", "さ", "れ", "た", "。"],
-        )
-
-    def test_mecab_tokenizer_unidic(self):
-        try:
-            tokenizer = MecabTokenizer(mecab_dic="unidic")
-        except ModuleNotFoundError:
-            return
-
-        self.assertListEqual(
-            tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["アップル", "ストア", "で", "iPhone", "8", "が", "発売", "さ", "れ", "た", "。"],
-        )
-
     def test_mecab_tokenizer_lower(self):
-        tokenizer = MecabTokenizer(do_lower_case=True, mecab_dic="ipadic")
+        tokenizer = MecabTokenizer(do_lower_case=True)
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
             ["アップルストア", "で", "iphone", "8", "が", "発売", "さ", "れ", "た", "。"],
         )
 
-    def test_mecab_tokenizer_with_option(self):
-        try:
-            tokenizer = MecabTokenizer(
-                do_lower_case=True, normalize_text=False, mecab_option="-d /usr/local/lib/mecab/dic/jumandic"
-            )
-        except RuntimeError:
-            # if dict doesn't exist in the system, previous code raises this error.
-            return
-
-        self.assertListEqual(
-            tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
-            ["ｱｯﾌﾟﾙストア", "で", "iPhone", "８", "が", "発売", "さ", "れた", "\u3000", "。"],
-        )
-
     def test_mecab_tokenizer_no_normalize(self):
-        tokenizer = MecabTokenizer(normalize_text=False, mecab_dic="ipadic")
+        tokenizer = MecabTokenizer(normalize_text=False)
 
         self.assertListEqual(
             tokenizer.tokenize(" \tｱｯﾌﾟﾙストアでiPhone８ が  \n 発売された　。  "),
@@ -188,8 +115,9 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
         self.assertListEqual(tokenizer.tokenize("こんばんは こんばんにちは こんにちは"), ["こん", "##ばんは", "[UNK]", "こんにちは"])
 
+    @slow
     def test_sequence_builders(self):
-        tokenizer = self.tokenizer_class.from_pretrained("cl-tohoku/bert-base-japanese")
+        tokenizer = self.tokenizer_class.from_pretrained("bert-base-japanese")
 
         text = tokenizer.encode("ありがとう。", add_special_tokens=False)
         text_2 = tokenizer.encode("どういたしまして。", add_special_tokens=False)
@@ -202,11 +130,9 @@ class BertJapaneseTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         assert encoded_pair == [2] + text + [3] + text_2 + [3]
 
 
-@custom_tokenizers
 class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     tokenizer_class = BertJapaneseTokenizer
-    test_rust_tokenizer = False
 
     def setUp(self):
         super().setUp()
@@ -220,19 +146,10 @@ class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestC
     def get_tokenizer(self, **kwargs):
         return BertJapaneseTokenizer.from_pretrained(self.tmpdirname, subword_tokenizer_type="character", **kwargs)
 
-    def get_input_output_texts(self, tokenizer):
+    def get_input_output_texts(self):
         input_text = "こんにちは、世界。 \nこんばんは、世界。"
         output_text = "こ ん に ち は 、 世 界 。 こ ん ば ん は 、 世 界 。"
         return input_text, output_text
-
-    def test_pretokenized_inputs(self):
-        pass  # TODO add if relevant
-
-    def test_maximum_encoding_length_pair_input(self):
-        pass  # TODO add if relevant
-
-    def test_maximum_encoding_length_single_input(self):
-        pass  # TODO add if relevant
 
     def test_full_tokenizer(self):
         tokenizer = self.tokenizer_class(self.vocab_file, subword_tokenizer_type="character")
@@ -259,8 +176,9 @@ class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestC
 
         self.assertListEqual(tokenizer.tokenize("こんにちほ"), ["こ", "ん", "に", "ち", "[UNK]"])
 
+    @slow
     def test_sequence_builders(self):
-        tokenizer = self.tokenizer_class.from_pretrained("cl-tohoku/bert-base-japanese-char")
+        tokenizer = self.tokenizer_class.from_pretrained("bert-base-japanese-char")
 
         text = tokenizer.encode("ありがとう。", add_special_tokens=False)
         text_2 = tokenizer.encode("どういたしまして。", add_special_tokens=False)
@@ -271,31 +189,3 @@ class BertJapaneseCharacterTokenizationTest(TokenizerTesterMixin, unittest.TestC
         # 2 is for "[CLS]", 3 is for "[SEP]"
         assert encoded_sentence == [2] + text + [3]
         assert encoded_pair == [2] + text + [3] + text_2 + [3]
-
-
-@custom_tokenizers
-class AutoTokenizerCustomTest(unittest.TestCase):
-    def test_tokenizer_bert_japanese(self):
-        EXAMPLE_BERT_JAPANESE_ID = "cl-tohoku/bert-base-japanese"
-        tokenizer = AutoTokenizer.from_pretrained(EXAMPLE_BERT_JAPANESE_ID)
-        self.assertIsInstance(tokenizer, BertJapaneseTokenizer)
-
-
-class BertTokenizerMismatchTest(unittest.TestCase):
-    def test_tokenizer_mismatch_warning(self):
-        EXAMPLE_BERT_JAPANESE_ID = "cl-tohoku/bert-base-japanese"
-        with self.assertLogs("transformers", level="WARNING") as cm:
-            BertTokenizer.from_pretrained(EXAMPLE_BERT_JAPANESE_ID)
-            self.assertTrue(
-                cm.records[0].message.startswith(
-                    "The tokenizer class you load from this checkpoint is not the same type as the class this function is called from."
-                )
-            )
-        EXAMPLE_BERT_ID = "bert-base-cased"
-        with self.assertLogs("transformers", level="WARNING") as cm:
-            BertJapaneseTokenizer.from_pretrained(EXAMPLE_BERT_ID)
-            self.assertTrue(
-                cm.records[0].message.startswith(
-                    "The tokenizer class you load from this checkpoint is not the same type as the class this function is called from."
-                )
-            )

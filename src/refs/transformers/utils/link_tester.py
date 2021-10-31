@@ -1,18 +1,4 @@
-# Copyright 2020 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-Link tester.
+""" Link tester.
 
 This little utility reads all the python files in the repository,
 scans for links pointing to S3 and tests the links one by one. Raises an error
@@ -32,7 +18,7 @@ S3_BUCKET_PREFIX = "https://s3.amazonaws.com/models.huggingface.co/bert"
 
 
 def list_python_files_in_repository():
-    """List all python files in the repository.
+    """ List all python files in the repository.
 
     This function assumes that the script is executed in the root folder.
     """
@@ -57,7 +43,7 @@ def find_all_links(file_paths):
 
 
 def scan_code_for_links(source):
-    """Scans the file to find links using a regular expression.
+    """ Scans the file to find links using a regular expression.
     Returns a list of links.
     """
     with open(source, "r") as content:
@@ -69,7 +55,7 @@ def scan_code_for_links(source):
 
 
 def check_all_links(links):
-    """Check that the provided links are valid.
+    """ Check that the provided links are valid.
 
     Links are considered valid if a HEAD request to the server
     returns a 200 status code.
@@ -91,6 +77,6 @@ if __name__ == "__main__":
     if broken_links:
         print("The following links did not respond:")
         for link in broken_links:
-            print(f"- {link}")
+            print("- {}".format(link))
         sys.exit(1)
     print("All links are ok.")

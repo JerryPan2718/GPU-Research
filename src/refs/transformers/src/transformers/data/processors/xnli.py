@@ -16,20 +16,18 @@
 """ XNLI utils (dataset loading and evaluation) """
 
 
+import logging
 import os
 
-from ...utils import logging
 from .utils import DataProcessor, InputExample
 
 
-logger = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class XnliProcessor(DataProcessor):
-    """
-    Processor for the XNLI dataset. Adapted from
-    https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L207
-    """
+    """Processor for the XNLI dataset.
+    Adapted from https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L207"""
 
     def __init__(self, language, train_language=None):
         self.language = language
@@ -38,21 +36,16 @@ class XnliProcessor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         lg = self.language if self.train_language is None else self.train_language
-        lines = self._read_tsv(os.path.join(data_dir, f"XNLI-MT-1.0/multinli/multinli.train.{lg}.tsv"))
+        lines = self._read_tsv(os.path.join(data_dir, "XNLI-MT-1.0/multinli/multinli.train.{}.tsv".format(lg)))
         examples = []
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
-            guid = f"train-{i}"
+            guid = "%s-%s" % ("train", i)
             text_a = line[0]
             text_b = line[1]
             label = "contradiction" if line[2] == "contradictory" else line[2]
-            if not isinstance(text_a, str):
-                raise ValueError(f"Training input {text_a} is not a string")
-            if not isinstance(text_b, str):
-                raise ValueError(f"Training input {text_b} is not a string")
-            if not isinstance(label, str):
-                raise ValueError(f"Training label {label} is not a string")
+            assert isinstance(text_a, str) and isinstance(text_b, str) and isinstance(label, str)
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
@@ -66,16 +59,11 @@ class XnliProcessor(DataProcessor):
             language = line[0]
             if language != self.language:
                 continue
-            guid = f"test-{i}"
+            guid = "%s-%s" % ("test", i)
             text_a = line[6]
             text_b = line[7]
             label = line[1]
-            if not isinstance(text_a, str):
-                raise ValueError(f"Training input {text_a} is not a string")
-            if not isinstance(text_b, str):
-                raise ValueError(f"Training input {text_b} is not a string")
-            if not isinstance(label, str):
-                raise ValueError(f"Training label {label} is not a string")
+            assert isinstance(text_a, str) and isinstance(text_b, str) and isinstance(label, str)
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 

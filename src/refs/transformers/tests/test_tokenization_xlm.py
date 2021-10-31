@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2018 The Google AI Language Team Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@ import json
 import os
 import unittest
 
-from transformers.models.xlm.tokenization_xlm import VOCAB_FILES_NAMES, XLMTokenizer
-from transformers.testing_utils import slow
+from transformers.tokenization_xlm import VOCAB_FILES_NAMES, XLMTokenizer
 
 from .test_tokenization_common import TokenizerTesterMixin
+from .utils import slow
 
 
 class XLMTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
 
     tokenizer_class = XLMTokenizer
-    test_rust_tokenizer = False
 
     def setUp(self):
         super().setUp()
@@ -66,13 +65,16 @@ class XLMTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         with open(self.merges_file, "w") as fp:
             fp.write("\n".join(merges))
 
-    def get_input_output_texts(self, tokenizer):
+    def get_tokenizer(self, **kwargs):
+        return XLMTokenizer.from_pretrained(self.tmpdirname, **kwargs)
+
+    def get_input_output_texts(self):
         input_text = "lower newer"
         output_text = "lower newer"
         return input_text, output_text
 
     def test_full_tokenizer(self):
-        """Adapted from Sennrich et al. 2015 and https://github.com/rsennrich/subword-nmt"""
+        """ Adapted from Sennrich et al. 2015 and https://github.com/rsennrich/subword-nmt """
         tokenizer = XLMTokenizer(self.vocab_file, self.merges_file)
 
         text = "lower"
@@ -94,5 +96,5 @@ class XLMTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         encoded_sentence = tokenizer.build_inputs_with_special_tokens(text)
         encoded_pair = tokenizer.build_inputs_with_special_tokens(text, text_2)
 
-        assert encoded_sentence == [0] + text + [1]
-        assert encoded_pair == [0] + text + [1] + text_2 + [1]
+        assert encoded_sentence == [1] + text + [1]
+        assert encoded_pair == [1] + text + [1] + text_2 + [1]

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2020 The HuggingFace Team. All rights reserved.
+# Copyright 2018 The Google AI Language Team Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,30 +16,25 @@
 import unittest
 
 from transformers import is_torch_available
-from transformers.testing_utils import require_sentencepiece, require_tokenizers, require_torch, slow, torch_device
+
+from .utils import require_torch, slow, torch_device
 
 
 if is_torch_available():
     import torch
-
     from transformers import CamembertModel
 
 
 @require_torch
-@require_sentencepiece
-@require_tokenizers
 class CamembertModelIntegrationTest(unittest.TestCase):
     @slow
     def test_output_embeds_base_model(self):
         model = CamembertModel.from_pretrained("camembert-base")
-        model.to(torch_device)
 
         input_ids = torch.tensor(
-            [[5, 121, 11, 660, 16, 730, 25543, 110, 83, 6]],
-            device=torch_device,
-            dtype=torch.long,
+            [[5, 121, 11, 660, 16, 730, 25543, 110, 83, 6]], device=torch_device, dtype=torch.long,
         )  # J'aime le camembert !
-        output = model(input_ids)["last_hidden_state"]
+        output = model(input_ids)[0]
         expected_shape = torch.Size((1, 10, 768))
         self.assertEqual(output.shape, expected_shape)
         # compare the actual values for a slice.

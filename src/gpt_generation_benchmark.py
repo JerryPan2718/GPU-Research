@@ -95,15 +95,15 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
                 if i in output_lens:
                     times_gpt.append(time.time() - t)
                 if i % int(fetch_cuda_stats_freq * output_len) == 0:
-                    gpt_cache.append(torch.cuda.memory_allocated(device=device))
                     torch.cuda.empty_cache()
+                    gpt_cache.append(torch.cuda.memory_allocated(device=device))
                 
     end.record()
     # Waits for everything to finish running
     torch.cuda.synchronize()
     gpt_times.append(start.elapsed_time(end))
 
-    file_name = output_file_path + " GPT-2 " + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
+    file_name = output_file_path + "GPT-2-" + "mem_len=" + str(mem_len) + "-output_len=" + str(output_len) + "-batch_size=" + str(batch_size) + ".txt"
     print(file_name)
     outF = open(file_name, "w")
     outF.write(str(sum(gpt_times) / reps / 1000))
@@ -131,8 +131,8 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
                 if i in output_lens:
                     times_causal_decoder.append(time.time() - t)
                 if i % int(fetch_cuda_stats_freq * output_len) == 0:
-                    causal_decoder_cache.append(torch.cuda.memory_allocated(device=device))
                     torch.cuda.empty_cache()
+                    causal_decoder_cache.append(torch.cuda.memory_allocated(device=device))
 
     print("Nb decoded tokens, time GPT2, time Causal Decoder, causal decoder / GPT2")
     for (nb_tokens, time_gpt, time_causal_decoder, ratio) in zip(
@@ -145,7 +145,7 @@ def gpt_generation_with_cache(hdim, nhead, num_layers, vocab_size, output_len, f
 
     # avg_time = sum(times) / reps
     # Output text file
-    file_name = output_file_path + " causal_decoder " + "mem_len=" + str(mem_len) + " output_len=" + str(output_len) + " batch_size=" + str(batch_size) + ".txt"
+    file_name = output_file_path + "causal_decoder-" + "mem_len=" + str(mem_len) + "-output_len=" + str(output_len) + "-batch_size=" + str(batch_size) + ".txt"
     print(file_name)
     outF = open(file_name, "w")
     outF.write(str(sum(times_causal_decoder) / reps / 1000))
