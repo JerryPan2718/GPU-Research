@@ -31,7 +31,7 @@ MODEL_CLASSES = {
 }
 
 ################################# Configuration: TO CHANGE ########################################
-mem_length = 256
+mem_length = 32
 
 ################################# Configuration: TO CHANGE ########################################
 
@@ -137,6 +137,8 @@ def main():
     tokenizer = tokenizer_class.from_pretrained("xlnet-base-cased")
     model = model_class.from_pretrained("xlnet-base-cased")
     model.to(args.device)
+    
+    print(next(model.parameters()).is_cuda)
 
     args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
     logger.info(args)
