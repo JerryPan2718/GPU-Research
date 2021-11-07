@@ -10,6 +10,24 @@ from data_utils import get_lm_corpus
 from mem_transformer import MemTransformerLM
 from utils.exp_utils import get_logger
 
+########################### CONFIG - TO CHANGE ######################################################################
+n_layer = 12
+n_head = 10
+d_head = 50
+d_embed = -1
+d_model = 500
+d_inner = 1000
+dropout = 0.0
+dropatt = 0.0
+init_range = 0.1
+emb_init_range = 0.01
+init_std = 0.02
+proj_init_std = 0.01
+lr = 0.00025
+mom = 0.0
+
+
+########################################################################################################################
 parser = argparse.ArgumentParser(description='PyTorch Transformer Language Model')
 parser.add_argument('--data', type=str, default='../data/wikitext-103',
                     help='location of the data corpus')
@@ -31,8 +49,8 @@ parser.add_argument('--clamp_len', type=int, default=-1,
                     help='max positional embedding index')
 parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
-# parser.add_argument('--work_dir', type=str, required=True,
-#                     help='path to the work_dir')
+parser.add_argument('--work_dir', type=str, default='../logs',
+                    help='path to the work_dir')
 parser.add_argument('--no_log', action='store_true',
                     help='do not log the eval result')
 parser.add_argument('--same_length', action='store_true',
@@ -92,8 +110,7 @@ def weights_init(m):
 ########################################################################################################################
 
 # Get logger
-# logging = get_logger(os.path.join(args.work_dir, 'log.txt'),
-#                      log_=not args.no_log)
+logging = get_logger(os.path.join(args.work_dir, 'log.txt'), log_=not args.no_log)
 
 # Load dataset
 corpus = get_lm_corpus(args.data, args.dataset)
