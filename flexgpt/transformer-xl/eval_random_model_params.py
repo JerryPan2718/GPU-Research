@@ -9,12 +9,18 @@ import torch
 from data_utils import get_lm_corpus
 from mem_transformer import MemTransformerLM
 from utils.exp_utils import get_logger
-################ CONFIG ##############################
-MODEL_DIR = "./models"
-OUTPUT_DIR = "./logs"
+from utils.exp_utils import create_exp_dir
+from datetime import date
 
-######################################################
+today = date.today()
+d3 = today.strftime("%m/%d/%y")
 def main(batch_size, tgt_len, ext_len, mem_len, clamp_len):
+    ################ CONFIG ##############################
+    MODEL_DIR = "./models"
+    OUTPUT_DIR = "./logs"
+
+    ######################################################
+
     parser = argparse.ArgumentParser(description='PyTorch Transformer Language Model')
     parser.add_argument('--data', type=str, default='../data/wikitext-103',
                         help='location of the data corpus')
@@ -53,10 +59,13 @@ def main(batch_size, tgt_len, ext_len, mem_len, clamp_len):
     device = torch.device("cuda" if args.cuda else "cpu")
 
     # Get logger
-    config_to_print = 'bsz {} tgt_len {} ext_len {} mem_len {} clamp_len {}'.format(
+    config_to_print = 'bsz={}-tgt_len={}-ext_len={}-mem_len={}-clamp_len={}'.format(
         batch_size, tgt_len, ext_len, mem_len, clamp_len)
+    OUTPUT_DIR = os.path.join(OUTPUT_DIR, time.strftime('%Y%m%d-%H%M%S'))
+    logging = create_exp_dir(OUTPUT_DIR, scripts_to_save=['train.py', 'mem_transformer.py'])
     logging = get_logger(os.path.join(OUTPUT_DIR, config_to_print + 'log.txt'),
                         log_=not args.no_log)
+                        
 
     # Load dataset
     corpus = get_lm_corpus(args.data, args.dataset)
@@ -143,8 +152,9 @@ def main(batch_size, tgt_len, ext_len, mem_len, clamp_len):
 if __name__ == "__main__":
     batch_size = 1
     tgt_len = 1000 # number of tokens to predict
-    ext_len = 0 # length of the extended context
+    ext_lens = [0, 32, 128, 512] # length of the extended context
     mem_lens = [0, 16, 256, 1024]
     clamp_len = -1 # max positional embedding index
     for mem_len in mem_lens:
-        main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
+        for ext_len in ext_lens:
+            main(batch_size, tgt_len, ext_len, mem_len, clamp_len)

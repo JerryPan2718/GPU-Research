@@ -1,0 +1,10 @@
+Evaluating with bsz 1 tgt_len 1000 ext_len 0 mem_len 16 clamp_len -1
+Time : 739.95s, 3007.92ms/segment
+Time : 656.15s, 3009.84ms/segment
+Time : 735.67s, 2990.53ms/segment
+Time : 651.29s, 2987.59ms/segment
+Time : 740.26s, 3009.17ms/segment
+Time : 651.90s, 2990.36ms/segment
+====================================================================================================
+| valid loss 12.45 | valid ppl 255609.689 | test loss 12.44 | test ppl 253770.605 
+====================================================================================================
