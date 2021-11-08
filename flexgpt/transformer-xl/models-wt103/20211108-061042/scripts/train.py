@@ -88,7 +88,7 @@ parser.add_argument('--not_tied', action='store_true',
                     help='do not tie the word embedding and softmax weights')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--cuda', type=bool, default=True,
+parser.add_argument('--cuda', action='store_true',
                     help='use CUDA')
 parser.add_argument('--adaptive', action='store_true',
                     help='use adaptive softmax')
@@ -104,7 +104,7 @@ parser.add_argument('--log-interval', type=int, default=200,
                     help='report interval')
 parser.add_argument('--eval-interval', type=int, default=4000,
                     help='evaluation interval')
-parser.add_argument('--work_dir', default='./models', type=str,
+parser.add_argument('--work_dir', default='LM-TFM', type=str,
                     help='experiment directory.')
 parser.add_argument('--restart', action='store_true',
                     help='restart training from the saved checkpoint')
@@ -383,180 +383,180 @@ logging('#non emb params = {}'.format(args.n_nonemb_param))
 # Training code
 ###############################################################################
 
-# def evaluate(eval_iter):
-#     # Turn on evaluation mode which disables dropout.
-#     model.eval()
+def evaluate(eval_iter):
+    # Turn on evaluation mode which disables dropout.
+    model.eval()
 
-#     # If the model does not use memory at all, make the ext_len longer.
-#     # Otherwise, make the mem_len longer and keep the ext_len the same.
-#     if args.mem_len == 0:
-#         model.reset_length(args.eval_tgt_len,
-#             args.ext_len+args.tgt_len-args.eval_tgt_len, args.mem_len)
-#     else:
-#         model.reset_length(args.eval_tgt_len,
-#             args.ext_len, args.mem_len+args.tgt_len-args.eval_tgt_len)
+    # If the model does not use memory at all, make the ext_len longer.
+    # Otherwise, make the mem_len longer and keep the ext_len the same.
+    if args.mem_len == 0:
+        model.reset_length(args.eval_tgt_len,
+            args.ext_len+args.tgt_len-args.eval_tgt_len, args.mem_len)
+    else:
+        model.reset_length(args.eval_tgt_len,
+            args.ext_len, args.mem_len+args.tgt_len-args.eval_tgt_len)
 
-#     # Evaluation
-#     total_len, total_loss = 0, 0.
-#     with torch.no_grad():
-#         mems = tuple()
-#         for i, (data, target, seq_len) in enumerate(eval_iter):
-#             if args.max_eval_steps > 0 and i >= args.max_eval_steps:
-#                 break
-#             ret = model(data, target, *mems)
-#             loss, mems = ret[0], ret[1:]
-#             loss = loss.mean()
-#             total_loss += seq_len * loss.float().item()
-#             total_len += seq_len
+    # Evaluation
+    total_len, total_loss = 0, 0.
+    with torch.no_grad():
+        mems = tuple()
+        for i, (data, target, seq_len) in enumerate(eval_iter):
+            if args.max_eval_steps > 0 and i >= args.max_eval_steps:
+                break
+            ret = model(data, target, *mems)
+            loss, mems = ret[0], ret[1:]
+            loss = loss.mean()
+            total_loss += seq_len * loss.float().item()
+            total_len += seq_len
 
-#     # Switch back to the training mode
-#     model.reset_length(args.tgt_len, args.ext_len, args.mem_len)
-#     model.train()
+    # Switch back to the training mode
+    model.reset_length(args.tgt_len, args.ext_len, args.mem_len)
+    model.train()
 
-#     return total_loss / total_len
+    return total_loss / total_len
 
 
-# def train():
-#     # Turn on training mode which enables dropout.
-#     global train_step, train_loss, best_val_loss, eval_start_time, log_start_time
-#     model.train()
-#     if args.batch_chunk > 1:
-#         mems = [tuple() for _ in range(args.batch_chunk)]
-#     else:
-#         mems = tuple()
-#     train_iter = tr_iter.get_varlen_iter() if args.varlen else tr_iter
-#     for batch, (data, target, seq_len) in enumerate(train_iter):
-#         model.zero_grad()
-#         if args.batch_chunk > 1:
-#             data_chunks = torch.chunk(data, args.batch_chunk, 1)
-#             target_chunks = torch.chunk(target, args.batch_chunk, 1)
-#             for i in range(args.batch_chunk):
-#                 data_i = data_chunks[i].contiguous()
-#                 target_i = target_chunks[i].contiguous()
-#                 ret = para_model(data_i, target_i, *mems[i])
-#                 loss, mems[i] = ret[0], ret[1:]
-#                 loss = loss.float().mean().type_as(loss) / args.batch_chunk
-#                 if args.fp16:
-#                     optimizer.backward(loss)
-#                 else:
-#                     loss.backward()
-#                 train_loss += loss.float().item()
-#         else:
-#             ret = para_model(data, target, *mems)
-#             loss, mems = ret[0], ret[1:]
-#             loss = loss.float().mean().type_as(loss)
-#             if args.fp16:
-#                 optimizer.backward(loss)
-#             else:
-#                 loss.backward()
-#             train_loss += loss.float().item()
+def train():
+    # Turn on training mode which enables dropout.
+    global train_step, train_loss, best_val_loss, eval_start_time, log_start_time
+    model.train()
+    if args.batch_chunk > 1:
+        mems = [tuple() for _ in range(args.batch_chunk)]
+    else:
+        mems = tuple()
+    train_iter = tr_iter.get_varlen_iter() if args.varlen else tr_iter
+    for batch, (data, target, seq_len) in enumerate(train_iter):
+        model.zero_grad()
+        if args.batch_chunk > 1:
+            data_chunks = torch.chunk(data, args.batch_chunk, 1)
+            target_chunks = torch.chunk(target, args.batch_chunk, 1)
+            for i in range(args.batch_chunk):
+                data_i = data_chunks[i].contiguous()
+                target_i = target_chunks[i].contiguous()
+                ret = para_model(data_i, target_i, *mems[i])
+                loss, mems[i] = ret[0], ret[1:]
+                loss = loss.float().mean().type_as(loss) / args.batch_chunk
+                if args.fp16:
+                    optimizer.backward(loss)
+                else:
+                    loss.backward()
+                train_loss += loss.float().item()
+        else:
+            ret = para_model(data, target, *mems)
+            loss, mems = ret[0], ret[1:]
+            loss = loss.float().mean().type_as(loss)
+            if args.fp16:
+                optimizer.backward(loss)
+            else:
+                loss.backward()
+            train_loss += loss.float().item()
 
-#         if args.fp16:
-#             optimizer.clip_master_grads(args.clip)
-#         else:
-#             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+        if args.fp16:
+            optimizer.clip_master_grads(args.clip)
+        else:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
 
-#         optimizer.step()
-#         if args.sample_softmax > 0:
-#             optimizer_sparse.step()
+        optimizer.step()
+        if args.sample_softmax > 0:
+            optimizer_sparse.step()
 
-#         # step-wise learning rate annealing
-#         train_step += 1
-#         if args.scheduler in ['cosine', 'constant', 'dev_perf']:
-#             # linear warmup stage
-#             if train_step < args.warmup_step:
-#                 curr_lr = args.lr * train_step / args.warmup_step
-#                 optimizer.param_groups[0]['lr'] = curr_lr
-#                 if args.sample_softmax > 0:
-#                     optimizer_sparse.param_groups[0]['lr'] = curr_lr * 2
-#             else:
-#                 if args.scheduler == 'cosine':
-#                     scheduler.step(train_step)
-#                     if args.sample_softmax > 0:
-#                         scheduler_sparse.step(train_step)
-#         elif args.scheduler == 'inv_sqrt':
-#             scheduler.step(train_step)
+        # step-wise learning rate annealing
+        train_step += 1
+        if args.scheduler in ['cosine', 'constant', 'dev_perf']:
+            # linear warmup stage
+            if train_step < args.warmup_step:
+                curr_lr = args.lr * train_step / args.warmup_step
+                optimizer.param_groups[0]['lr'] = curr_lr
+                if args.sample_softmax > 0:
+                    optimizer_sparse.param_groups[0]['lr'] = curr_lr * 2
+            else:
+                if args.scheduler == 'cosine':
+                    scheduler.step(train_step)
+                    if args.sample_softmax > 0:
+                        scheduler_sparse.step(train_step)
+        elif args.scheduler == 'inv_sqrt':
+            scheduler.step(train_step)
 
-#         if train_step % args.log_interval == 0:
-#             cur_loss = train_loss / args.log_interval
-#             elapsed = time.time() - log_start_time
-#             log_str = '| epoch {:3d} step {:>8d} | {:>6d} batches | lr {:.3g} ' \
-#                       '| ms/batch {:5.2f} | loss {:5.2f}'.format(
-#                 epoch, train_step, batch+1, optimizer.param_groups[0]['lr'],
-#                 elapsed * 1000 / args.log_interval, cur_loss)
-#             if args.dataset in ['enwik8', 'text8']:
-#                 log_str += ' | bpc {:9.5f}'.format(cur_loss / math.log(2))
-#             else:
-#                 log_str += ' | ppl {:9.3f}'.format(math.exp(cur_loss))
-#             logging(log_str)
-#             train_loss = 0
-#             log_start_time = time.time()
+        if train_step % args.log_interval == 0:
+            cur_loss = train_loss / args.log_interval
+            elapsed = time.time() - log_start_time
+            log_str = '| epoch {:3d} step {:>8d} | {:>6d} batches | lr {:.3g} ' \
+                      '| ms/batch {:5.2f} | loss {:5.2f}'.format(
+                epoch, train_step, batch+1, optimizer.param_groups[0]['lr'],
+                elapsed * 1000 / args.log_interval, cur_loss)
+            if args.dataset in ['enwik8', 'text8']:
+                log_str += ' | bpc {:9.5f}'.format(cur_loss / math.log(2))
+            else:
+                log_str += ' | ppl {:9.3f}'.format(math.exp(cur_loss))
+            logging(log_str)
+            train_loss = 0
+            log_start_time = time.time()
 
-#         if train_step % args.eval_interval == 0:
-#             val_loss = evaluate(va_iter)
-#             logging('-' * 100)
-#             log_str = '| Eval {:3d} at step {:>8d} | time: {:5.2f}s ' \
-#                       '| valid loss {:5.2f}'.format(
-#                 train_step // args.eval_interval, train_step,
-#                 (time.time() - eval_start_time), val_loss)
-#             if args.dataset in ['enwik8', 'text8']:
-#                 log_str += ' | bpc {:9.5f}'.format(val_loss / math.log(2))
-#             else:
-#                 log_str += ' | valid ppl {:9.3f}'.format(math.exp(val_loss))
-#             logging(log_str)
-#             logging('-' * 100)
-#             # Save the model if the validation loss is the best we've seen so far.
-#             if not best_val_loss or val_loss < best_val_loss:
-#                 if not args.debug:
-#                     with open(os.path.join(args.work_dir, 'model.pt'), 'wb') as f:
-#                         torch.save(model, f)
-#                     with open(os.path.join(args.work_dir, 'optimizer.pt'), 'wb') as f:
-#                         torch.save(optimizer.state_dict(), f)
-#                 best_val_loss = val_loss
+        if train_step % args.eval_interval == 0:
+            val_loss = evaluate(va_iter)
+            logging('-' * 100)
+            log_str = '| Eval {:3d} at step {:>8d} | time: {:5.2f}s ' \
+                      '| valid loss {:5.2f}'.format(
+                train_step // args.eval_interval, train_step,
+                (time.time() - eval_start_time), val_loss)
+            if args.dataset in ['enwik8', 'text8']:
+                log_str += ' | bpc {:9.5f}'.format(val_loss / math.log(2))
+            else:
+                log_str += ' | valid ppl {:9.3f}'.format(math.exp(val_loss))
+            logging(log_str)
+            logging('-' * 100)
+            # Save the model if the validation loss is the best we've seen so far.
+            if not best_val_loss or val_loss < best_val_loss:
+                if not args.debug:
+                    with open(os.path.join(args.work_dir, 'model.pt'), 'wb') as f:
+                        torch.save(model, f)
+                    with open(os.path.join(args.work_dir, 'optimizer.pt'), 'wb') as f:
+                        torch.save(optimizer.state_dict(), f)
+                best_val_loss = val_loss
 
-#             # dev-performance based learning rate annealing
-#             if args.scheduler == 'dev_perf':
-#                 scheduler.step(val_loss)
-#                 if args.sample_softmax > 0:
-#                     scheduler_sparse.step(val_loss)
+            # dev-performance based learning rate annealing
+            if args.scheduler == 'dev_perf':
+                scheduler.step(val_loss)
+                if args.sample_softmax > 0:
+                    scheduler_sparse.step(val_loss)
 
-#             eval_start_time = time.time()
+            eval_start_time = time.time()
 
-#         if train_step == args.max_step:
-#             break
+        if train_step == args.max_step:
+            break
 
-# # Loop over epochs.
-# train_step = 0
-# train_loss = 0
-# best_val_loss = None
+# Loop over epochs.
+train_step = 0
+train_loss = 0
+best_val_loss = None
 
-# log_start_time = time.time()
-# eval_start_time = time.time()
+log_start_time = time.time()
+eval_start_time = time.time()
 
-# # At any point you can hit Ctrl + C to break out of training early.
-# try:
-#     for epoch in itertools.count(start=1):
-#         train()
-#         if train_step == args.max_step:
-#             logging('-' * 100)
-#             logging('End of training')
-#             break
-# except KeyboardInterrupt:
-#     logging('-' * 100)
-#     logging('Exiting from training early')
+# At any point you can hit Ctrl + C to break out of training early.
+try:
+    for epoch in itertools.count(start=1):
+        train()
+        if train_step == args.max_step:
+            logging('-' * 100)
+            logging('End of training')
+            break
+except KeyboardInterrupt:
+    logging('-' * 100)
+    logging('Exiting from training early')
 
 # Load the best saved model.
 with open(os.path.join(args.work_dir, 'model.pt'), 'rb') as f:
     model = torch.load(f)
-# para_model = model.to(device)
+para_model = model.to(device)
 
-# # Run on test data.
-# test_loss = evaluate(te_iter)
-# logging('=' * 100)
-# if args.dataset in ['enwik8', 'text8']:
-#     logging('| End of training | test loss {:5.2f} | test bpc {:9.5f}'.format(
-#         test_loss, test_loss / math.log(2)))
-# else:
-#     logging('| End of training | test loss {:5.2f} | test ppl {:9.3f}'.format(
-#         test_loss, math.exp(test_loss)))
-# logging('=' * 100)
+# Run on test data.
+test_loss = evaluate(te_iter)
+logging('=' * 100)
+if args.dataset in ['enwik8', 'text8']:
+    logging('| End of training | test loss {:5.2f} | test bpc {:9.5f}'.format(
+        test_loss, test_loss / math.log(2)))
+else:
+    logging('| End of training | test loss {:5.2f} | test ppl {:9.3f}'.format(
+        test_loss, math.exp(test_loss)))
+logging('=' * 100)
