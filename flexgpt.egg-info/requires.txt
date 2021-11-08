@@ -1,0 +1,9 @@
+numpy
+pandas
+transformers
+
+[test]
+pytest
+tensorflow
+matplotlib
+graphviz

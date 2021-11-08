@@ -1,0 +1,17 @@
+LICENSE
+README.md
+setup.py
+flexgpt/XLNet-generation-benchmark.py
+flexgpt/cached_model_benchmark.py
+flexgpt/cached_model_benchmark_pure_tensor_slicing.py
+flexgpt/eval_random_model_params.py
+flexgpt/gpt_generation_benchmark.py
+flexgpt/gpt_generation_benchmark_scaleAI.py
+flexgpt/model.py
+flexgpt/transformers_benchmark.py
+flexgpt/transformers_benchmark_scaleAI.py
+flexgpt.egg-info/PKG-INFO
+flexgpt.egg-info/SOURCES.txt
+flexgpt.egg-info/dependency_links.txt
+flexgpt.egg-info/requires.txt
+flexgpt.egg-info/top_level.txt
