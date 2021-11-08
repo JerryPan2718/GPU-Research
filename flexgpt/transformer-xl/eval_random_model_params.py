@@ -10,7 +10,7 @@ from data_utils import get_lm_corpus
 from mem_transformer import MemTransformerLM
 from utils.exp_utils import get_logger
 ################ CONFIG ##############################
-MODEL_DIR = "./models/"
+MODEL_DIR = "./models"
 OUTPUT_DIR = "./logs"
 
 ######################################################
@@ -142,9 +142,9 @@ def main(batch_size, tgt_len, ext_len, mem_len, clamp_len):
 
 if __name__ == "__main__":
     batch_size = 1
-    tgt_len = 50 # number of tokens to predict
+    tgt_len = 1000 # number of tokens to predict
     ext_len = 0 # length of the extended context
-    mem_lens = [0, 4, 16, 64, 256]
+    mem_lens = [0, 16, 256, 1024]
     clamp_len = -1 # max positional embedding index
     for mem_len in mem_lens:
         main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
