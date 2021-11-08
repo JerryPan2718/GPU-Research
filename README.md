@@ -2,6 +2,8 @@
 
 
 Steps to replicate the experiments:
+
+
 [Git Clone this Git Repository]
 1. git clone https://github.com/JerryPan2718/GPU-Research.git
 
