@@ -11,6 +11,7 @@ from mem_transformer import MemTransformerLM
 from utils.exp_utils import get_logger
 from utils.exp_utils import create_exp_dir
 from datetime import date
+from torch.profiler import profile, record_function, ProfilerActivity
 
 today = date.today()
 d3 = today.strftime("%m/%d/%y")
@@ -157,4 +158,6 @@ if __name__ == "__main__":
     clamp_len = -1 # max positional embedding index
     for mem_len in mem_lens:
         for ext_len in ext_lens:
-            main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+                with record_function("model_inference"):
+                    main(batch_size, tgt_len, ext_len, mem_len, clamp_len)

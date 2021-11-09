@@ -1,7 +1,7 @@
 echo "=== Acquiring datasets ==="
 echo "---"
 
-# mkdir -p data
+mkdir -p data
 cd data
 
 if [[ ! -d 'wikitext-2' ]]; then
