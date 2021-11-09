@@ -16,12 +16,13 @@ RUN pip install wandb loguru transformers tqdm
 ARG UID=1000
 ARG GID=1000
 RUN groupadd -f -g $GID g-$GID && useradd -u $UID -g $GID -m -d /home/$UID -s /bin/bash u-$UID
-# RUN --mount=type=secret,id=netrc (cat /run/secrets/netrc > /home/$UID/.netrc); chown $UID:$GID /home/$UID/.netrc
+RUN --mount=type=secret,id=netrc (cat /run/secrets/netrc > /home/$UID/.netrc); chown $UID:$GID /home/$UID/.netrc
 USER $UID:$GID
 
 WORKDIR /app
-COPY . .
-RUN pip install -e .
-WORKDIR /app/flexgpt/transformer-xl
-RUN python train_random_model_params.py
-WORKDIR /app
+VOLUME /app
+# COPY . .
+# RUN pip install -e .
+# WORKDIR /app/flexgpt/transformer-xl
+# RUN python train_random_model_params.py
+# WORKDIR /app

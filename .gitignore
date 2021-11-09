@@ -1,4 +1,5 @@
 flexgpt/data/
+flexgpt/logs/
 flexgpt/transformer-xl/models/*
 
 # Byte-compiled / optimized / DLL files

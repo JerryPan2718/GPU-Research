@@ -4,8 +4,8 @@ eval homedir="$(printf "~/%q" "$relativepath")"
 
 set -xe
 
-#    --secret id=netrc,src=$homedir/.netrc \
 DOCKER_BUILDKIT=1 docker build \
+   --secret id=netrc,src=$homedir/.netrc \
     --build-arg UID=$(id -u) \
     --build-arg GID=$(id -g) \
     -t gptinference .
