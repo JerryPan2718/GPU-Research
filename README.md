@@ -16,9 +16,8 @@ Steps to replicate the experiments:
 
 [Download the data first]
 1. cd ./flexgpt/
-2. mkdir data
-3. bash getdata.sh
-4. Feel free to early abort the download of 1B words dataset after several seconds.
+2. bash getdata.sh
+3. Feel free to early abort the download of 1B words dataset after several seconds.
 
 
 [Generate the model.pt with random parameter]
