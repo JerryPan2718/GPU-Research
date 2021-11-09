@@ -156,8 +156,12 @@ if __name__ == "__main__":
     ext_lens = [0, 32, 128, 512] # length of the extended context
     mem_lens = [0, 16, 256, 1024]
     clamp_len = -1 # max positional embedding index
-    for mem_len in mem_lens:
-        for ext_len in ext_lens:
-            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
-                with record_function("model_inference"):
-                    main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with record_function("model_inference"):
+            main(batch_size, tgt_len, 0, 256, clamp_len)
+            print("######################################################################")
+            print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+            # for mem_len in mem_lens:
+            #     for ext_len in ext_lens:    
+            #         main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
+            
