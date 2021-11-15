@@ -23,7 +23,7 @@ def main(batch_size, tgt_len, ext_len, mem_len, clamp_len):
     ######################################################
 
     parser = argparse.ArgumentParser(description='PyTorch Transformer Language Model')
-    parser.add_argument('--data', type=str, default='../data/wikitext-103',
+    parser.add_argument('--data', type=str, default='/data/wikitext-103',
                         help='location of the data corpus')
     parser.add_argument('--dataset', type=str, default='wt103',
                         choices=['wt103', 'lm1b', 'enwik8', 'text8'],
@@ -104,6 +104,7 @@ def main(batch_size, tgt_len, ext_len, mem_len, clamp_len):
         with torch.no_grad():
             mems = tuple()
             for idx, (data, target, seq_len) in enumerate(eval_iter):
+                print(f"{data.shape}, {target.shape}, [{','.join([x.shape for x in mems])}]")
                 ret = model(data, target, *mems)
                 loss, mems = ret[0], ret[1:]
                 loss = loss.mean()
@@ -156,12 +157,12 @@ if __name__ == "__main__":
     ext_lens = [0, 32, 128, 512] # length of the extended context
     mem_lens = [0, 16, 256, 1024]
     clamp_len = -1 # max positional embedding index
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
-        with record_function("model_inference"):
-            main(batch_size, tgt_len, 0, 256, clamp_len)
-            print("######################################################################")
-            print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
-            # for mem_len in mem_lens:
-            #     for ext_len in ext_lens:    
-            #         main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
+    # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+    #     with record_function("model_inference"):
+            # main(batch_size, tgt_len, 0, 0, clamp_len)
+            # print("######################################################################")
+            # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+    for mem_len in mem_lens:
+        for ext_len in ext_lens:    
+            main(batch_size, tgt_len, ext_len, mem_len, clamp_len)
             
