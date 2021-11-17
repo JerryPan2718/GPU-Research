@@ -27,7 +27,10 @@ def sample(model, x, steps, temperature=1.0, sample=False, top_k=None):
     block_size = model.get_block_size()
     model.eval()
     for k in range(steps):
-        x_cond = x if x.size(1) <= block_size else x[:, -block_size:] # crop context if needed
+        # crop context if needed
+        x_cond = x if x.size(1) <= block_size else x[:, -block_size:]
+        # x_cond = x if x.size(1) <= block_size else x[:, :] # Use all previous tokens as Auto-regressive model
+        
         logits, _ = model(x_cond)
         # pluck the logits at the final step and scale by temperature
         logits = logits[:, -1, :] / temperature
@@ -39,9 +42,12 @@ def sample(model, x, steps, temperature=1.0, sample=False, top_k=None):
         # sample from the distribution or take the most likely
         if sample:
             ix = torch.multinomial(probs, num_samples=1)
+            # print(ix.shape)
         else:
             _, ix = torch.topk(probs, k=1, dim=-1)
         # append to the sequence and continue
         x = torch.cat((x, ix), dim=1)
+        print(x.shape)
+        # print(x_cond.shape)
 
     return x

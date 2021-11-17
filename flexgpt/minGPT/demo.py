@@ -16,6 +16,7 @@ from torch.nn import functional as F
 import math
 from torch.utils.data import Dataset
 import time
+from torch.profiler import profile, record_function, ProfilerActivity
 
 class CharDataset(Dataset):
 
@@ -74,7 +75,7 @@ class CharDataset(Dataset):
         x = torch.tensor(dix[:-1], dtype=torch.long)
         y = torch.tensor(dix[1:], dtype=torch.long)
         return x, y
-block_size = 128 # spatial extent of the model for its context
+block_size = 2048 # spatial extent of the model for its context
 # you can download this file at https://github.com/karpathy/char-rnn/blob/master/data/tinyshakespeare/input.txt
 text = open('input.txt', 'r').read() # don't worry we won't run out of file handles
 train_dataset = CharDataset(text, block_size) # one line of poem is roughly 50 characters
@@ -83,7 +84,7 @@ from mingpt.model import GPT, GPTConfig
 mconf = GPTConfig(train_dataset.vocab_size, train_dataset.block_size,
                   n_layer=8, n_head=8, n_embd=512)
 model = GPT(mconf)
-print("=" * 100)
+print("=" * 50)
 
 from mingpt.trainer import Trainer, TrainerConfig
 
@@ -93,15 +94,21 @@ tconf = TrainerConfig(max_epochs=1, batch_size=128, learning_rate=6e-4,
                       num_workers=4)
 trainer = Trainer(model, train_dataset, None, tconf)
 trainer.train()
-print("=" * 100)
+print("=" * 50)
 
 # alright, let's sample some character-level Shakespeare
 from mingpt.utils import sample
 context = "O God, O God!"
 x = torch.tensor([train_dataset.stoi[s] for s in context], dtype=torch.long)[None,...].to(trainer.device)
-start_time = time.time()
-y = sample(model, x, 2000, temperature=1.0, sample=True, top_k=10)[0]
-end_time = time.time()
+
+with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+    with record_function("model_inference"):
+        start_time = time.time()
+        y = sample(model, x, 2000, temperature=1.0, sample=True, top_k=10)[0]
+        end_time = time.time()
+print("######################################################################")
+print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+        
 completion = ''.join([train_dataset.itos[int(i)] for i in y])
 print(completion)
 print("Inference Time: " + str(end_time - start_time) + " seconds")
