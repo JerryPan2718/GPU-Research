@@ -230,13 +230,12 @@ class MemGPT(nn.Module):
             end_idx = mlen + max(0, qlen - 0 - ext_len)
             beg_idx = max(0, end_idx - self.mem_len)
             for i in range(len(hids)):
-
                 cat = torch.cat([mems[i], hids[i]], dim=0)
                 new_mems.append(cat[beg_idx:end_idx].detach())
 
         return new_mems
 
-    def _forward(self, idx, targets=None, dec_inp):
+    def _forward(self, idx, dec_inp, mems=None, targets=None):
         b, t = idx.size()
         assert t <= self.block_size, "Cannot forward, model block size is exhausted."
         # Standard Transformer without relative positional encodings or reccurence mechanisms (attn_type=2)
