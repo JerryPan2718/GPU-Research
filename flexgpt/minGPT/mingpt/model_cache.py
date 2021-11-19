@@ -210,7 +210,7 @@ class MemGPT(nn.Module):
         else:
             return None
     
-    def _update_mems(self, hids, mems, qlen, mlen):
+    def update_mems(self, hids, mems, qlen, mlen):
         # does not deal with None
         if mems is None: return None
 
@@ -236,7 +236,7 @@ class MemGPT(nn.Module):
 
         return new_mems
 
-    def _forward(self, idx, targets=None):
+    def _forward(self, idx, targets=None, dec_inp):
         b, t = idx.size()
         assert t <= self.block_size, "Cannot forward, model block size is exhausted."
         # Standard Transformer without relative positional encodings or reccurence mechanisms (attn_type=2)
@@ -257,6 +257,23 @@ class MemGPT(nn.Module):
         x = self.ln_f(x)
         logits = self.head(x)
 
+
+        # pos_seq = torch.arange(klen-1, -1, -1.0, device=word_emb.device, 
+        #                            dtype=word_emb.dtype)
+        # if self.clamp_len > 0:
+        #     pos_seq.clamp_(max=self.clamp_len)
+        # pos_emb = self.pos_emb(pos_seq)
+
+        # core_out = self.drop(word_emb)
+        # pos_emb = self.drop(pos_emb)
+
+        # hids.append(core_out)
+        # for i, layer in enumerate(self.layers):
+        #     mems_i = None if mems is None else mems[i]
+        #     core_out = layer(core_out, pos_emb, self.r_w_bias,
+        #             self.r_r_bias, dec_attn_mask=dec_attn_mask, mems=mems_i)
+        #     hids.append(core_out)
+
         # if we are given some desired targets also calculate the loss
         loss = None
         if targets is not None:
@@ -264,6 +281,10 @@ class MemGPT(nn.Module):
 
         return logits, loss
 
+    def _create_params(self):
+        self.pos_emb = PositionalEmbedding(self.d_model)
+        self.r_w_bias = nn.Parameter(torch.Tensor(self.n_head, self.d_head))
+        self.r_r_bias = nn.Parameter(torch.Tensor(self.n_head, self.d_head))
 # class MemGPT(nn.Module):
 #     """  the cached full GPT language model, with a context size of block_size """
 
