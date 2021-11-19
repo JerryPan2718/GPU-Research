@@ -16,25 +16,28 @@ from torch.nn import functional as F
 
 logger = logging.getLogger(__name__)
 
-class GPTConfig:
-    """ base GPT config, params common to all GPT versions """
+class MemGPTConfig:
+    """ MemGPT config, params common to all GPT versions """
     embd_pdrop = 0.1
     resid_pdrop = 0.1
     attn_pdrop = 0.1
 
-    def __init__(self, vocab_size, block_size, **kwargs):
+    def __init__(self, vocab_size, block_size, mem_len, **kwargs):
         self.vocab_size = vocab_size
         self.block_size = block_size
+        self.mem_len = mem_len
         for k,v in kwargs.items():
             setattr(self, k, v)
 
-class GPT1Config(GPTConfig):
+class MemGPT1Config(MemGPTConfig):
     """ GPT-1 like network roughly 125M params """
     n_layer = 12
     n_head = 12
     n_embd = 768
 
-class CausalSelfAttention(nn.Module):
+
+
+class MemCausalSelfAttention(nn.Module):
     """
     A vanilla multi-head masked self-attention layer with a projection at the end.
     It is possible to use torch.nn.MultiheadAttention here but I am including an
@@ -78,14 +81,14 @@ class CausalSelfAttention(nn.Module):
         y = self.resid_drop(self.proj(y))
         return y
 
-class Block(nn.Module):
-    """ an unassuming Transformer block """
+class MemBlock(nn.Module):
+    """ an unassuming MemTransformer block """
 
     def __init__(self, config):
         super().__init__()
         self.ln1 = nn.LayerNorm(config.n_embd)
         self.ln2 = nn.LayerNorm(config.n_embd)
-        self.attn = CausalSelfAttention(config)
+        self.attn = MemCausalSelfAttention(config)
         self.mlp = nn.Sequential(
             nn.Linear(config.n_embd, 4 * config.n_embd),
             nn.GELU(),
@@ -98,8 +101,8 @@ class Block(nn.Module):
         x = x + self.mlp(self.ln2(x))
         return x
 
-class GPT(nn.Module):
-    """  the full GPT language model, with a context size of block_size """
+class MemGPT(nn.Module):
+    """  the full MemGPT language model, with a context size of block_size """
 
     def __init__(self, config):
         super().__init__()
@@ -109,11 +112,11 @@ class GPT(nn.Module):
         self.pos_emb = nn.Parameter(torch.zeros(1, config.block_size, config.n_embd))
         self.drop = nn.Dropout(config.embd_pdrop)
         # transformer
-        self.blocks = nn.Sequential(*[Block(config) for _ in range(config.n_layer)])
+        self.blocks = nn.Sequential(*[MemBlock(config) for _ in range(config.n_layer)])
         # decoder head
         self.ln_f = nn.LayerNorm(config.n_embd)
         self.head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
-
+        self.mem_len = config.mem_len
         self.block_size = config.block_size
         self.apply(self._init_weights)
 
@@ -195,7 +198,73 @@ class GPT(nn.Module):
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
 
         return logits, loss
+    
+    def init_mems(self):
+        if self.mem_len > 0:
+            mems = []
+            param = next(self.parameters())
+            for i in range(self.n_layer+1):
+                empty = torch.empty(0, dtype=param.dtype, device=param.device)
+                mems.append(empty)
+            return mems
+        else:
+            return None
+    
+    def _update_mems(self, hids, mems, qlen, mlen):
+        # does not deal with None
+        if mems is None: return None
 
+        # mems is not None
+        assert len(hids) == len(mems), 'len(hids) != len(mems)'
 
-class MemGPT(nn.Module):
-    def 
+        # There are `mlen + qlen` steps that can be cached into mems
+        # For the next step, the last `ext_len` of the `qlen` tokens
+        # will be used as the extended context. Hence, we only cache
+        # the tokens from `mlen + qlen - self.ext_len - self.mem_len`
+        # to `mlen + qlen - self.ext_len`.
+        ext_len = block_size
+        hids = n_layer
+
+        with torch.no_grad():
+            new_mems = []
+            end_idx = mlen + max(0, qlen - 0 - ext_len)
+            beg_idx = max(0, end_idx - self.mem_len)
+            for i in range(len(hids)):
+
+                cat = torch.cat([mems[i], hids[i]], dim=0)
+                new_mems.append(cat[beg_idx:end_idx].detach())
+
+        return new_mems
+
+    def _forward(self, idx, targets=None):
+        b, t = idx.size()
+        assert t <= self.block_size, "Cannot forward, model block size is exhausted."
+        # Standard Transformer without relative positional encodings or reccurence mechanisms (attn_type=2)
+        ###################################################################
+        qlen, bsz = dec_inp.size()
+
+        word_emb = self.word_emb(dec_inp)
+
+        mlen = mems[0].size(0) if mems is not None else 0
+        klen = mlen + qlen
+        ###################################################################
+
+        # forward the GPT model
+        token_embeddings = self.tok_emb(idx) # each index maps to a (learnable) vector
+        position_embeddings = self.pos_emb[:, :t, :] # each position maps to a (learnable) vector
+        x = self.drop(token_embeddings + position_embeddings)
+        x = self.blocks(x)
+        x = self.ln_f(x)
+        logits = self.head(x)
+
+        # if we are given some desired targets also calculate the loss
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+
+        return logits, loss
+
+# class MemGPT(nn.Module):
+#     """  the cached full GPT language model, with a context size of block_size """
+
+#     def __init(self, config, )
