@@ -34,48 +34,84 @@ class MemGPT1Config(MemGPTConfig):
     n_head = 12
     n_embd = 768
 
-class MemCausalSelfAttention(nn.Module):
-    """
-    A vanilla multi-head masked self-attention layer with a projection at the end.
-    It is possible to use torch.nn.MultiheadAttention here but I am including an
-    explicit implementation here to show that there is nothing too scary here.
-    """
+class CachedModule(nn.Module):
+    """ cache object """
+    def __init__(self, x = None):
+        super().__init__()
+        self.cache = x
+    
+    def clear_cache(self):
+        self.cache = None
+    
+    def set_cache(self, x):
+        self.cache = x
 
-    def __init__(self, config):
+class CachedDense(CachedModule):
+    """ cached nn.Dense layer """
+    def __init__(self, x = None):
+        CachedModule.__init__(self, x)
+
+    def forward(self, x):
+        """ 
+        x: BTH 
+        cache: B(T-1)H  
+        """
+        cache = self.cache
+        new_out = self.dense(x[:, -1:, :])
+        y = torch.stack(cache, new_out)
+        self.set_cache(y)
+        return y
+
+class CachedSelfAttn(CachedDense):
+    """" cached attention op """
+    def __init__(self, config, q = None, k = None, v = None, qkt = None):
+        """
+        q: BKT(H/K)
+        k: BKT(H/K)
+        v: BKT(H/K)
+        qkt: BKTT
+        """
         super().__init__()
         assert config.n_embd % config.n_head == 0
-        # key, query, value projections for all heads
-        self.key = nn.Linear(config.n_embd, config.n_embd)
-        self.query = nn.Linear(config.n_embd, config.n_embd)
-        self.value = nn.Linear(config.n_embd, config.n_embd)
-        # regularization
-        self.attn_drop = nn.Dropout(config.attn_pdrop)
-        self.resid_drop = nn.Dropout(config.resid_pdrop)
-        # output projection
-        self.proj = nn.Linear(config.n_embd, config.n_embd)
-        # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.register_buffer("mask", torch.tril(torch.ones(config.block_size, config.block_size))
-                                     .view(1, 1, config.block_size, config.block_size))
+
+        self.k = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.q = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.v = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.y = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.qkt = CachedDense(None)
         self.n_head = config.n_head
+        
+    
+    def clear_cache(self):
+        self.q.clear_cache()
+        self.k.clear_cache()
+        self.v.clear_cache()
+        self.qkt.clear_cache()
+    
+    def forward(self, x):
+        B, T, H = x.size()
+        K = self.n_head
+        qkt_cached = self.qkt
+        y_cached = self.y
+        q = self.q(x).view(B, K, T, T // K)
+        k = self.k(x).view(B, K, T, T // K)
+        v = self.v(x).view(B, K, T, T // K)
+        qkt = torch.zeros(B, K, T, T)
+        qkt[:, :, :-1, :-1] = qkt_cached
 
-    def forward(self, x, layer_past=None):
-        B, T, C = x.size()
+        # qkt: BKT(H/K) * BKT(H/K).T -> BKTT
+        qkt[:, :, :, -1] = q[:, :, :, -1:] @ k.transpose(-2, -1) 
+        attn = qkt * (1.0 / math.sqrt(k.size(-1)))
+        attn = attn.masked_fill(self.attn_mask[:, :, :T, :T], 1e-9)
+        attn = F.softmax(attn, dim=-1)
+        new_attn = attn[:, :, -1:, -1:]
 
-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-
-        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-        att = att.masked_fill(self.mask[:,:,:T,:T] == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-        att = self.attn_drop(att)
-        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
-        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
-
-        # output projection
-        y = self.resid_drop(self.proj(y))
+        # y_new: BK(T-1)T * BKT(H/K) -> BK(T-1)(H/K)
+        y_new = new_attn @ v
+        y = torch.stack(y_cached, new_attn @ v, dim=2)
+        # self.set_cache((qkt, y))
+        self.qkt.set_cache(qkt)
+        self.y.set_cache(y)
         return y
 
 class MemBlock(nn.Module):
@@ -85,7 +121,7 @@ class MemBlock(nn.Module):
         super().__init__()
         self.ln1 = nn.LayerNorm(config.n_embd)
         self.ln2 = nn.LayerNorm(config.n_embd)
-        self.attn = MemCausalSelfAttention(config)
+        self.attn = CachedSelfAttn(config)
         self.mlp = nn.Sequential(
             nn.Linear(config.n_embd, 4 * config.n_embd),
             nn.GELU(),
