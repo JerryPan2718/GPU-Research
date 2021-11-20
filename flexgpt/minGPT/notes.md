@@ -42,7 +42,7 @@ class CachedSelfAttn:
         qkt = torch.zeros(B, K, T, T)
         qkt[:, :, :-1, :-1] = qkt_cached
         qkt[:, :, :, -1] = q[:, :, :, -1:] @ k.T
-        qkt = qkt.masked_fill(self.attn_mask, 1e-9)\\
+        qkt = qkt.masked_fill(self.attn_mask, 1e-9)
         attn = softmax(qkt)
         new_attn = attn[:, :, -1:, -1:]
         y = torch.stack(y_cached, new_attn @ v)

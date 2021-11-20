@@ -7,7 +7,7 @@ logging.basicConfig(
 )
 
 # make deterministic
-from mingpt.utils import set_seed
+from MemUtils import set_seed
 set_seed(2718)
 import numpy as np
 import torch
@@ -80,24 +80,24 @@ block_size = 2048 # spatial extent of the model for its context
 text = open('input.txt', 'r').read() # don't worry we won't run out of file handles
 train_dataset = CharDataset(text, block_size) # one line of poem is roughly 50 characters
 
-from mingpt.model import GPT, GPTConfig
-mconf = GPTConfig(train_dataset.vocab_size, train_dataset.block_size,
+from MemModel import MemGPT, MemGPTConfig
+mconf = MemGPTConfig(train_dataset.vocab_size, train_dataset.block_size,
                   n_layer=8, n_head=8, n_embd=512)
-model = GPT(mconf)
+model = MemGPT(mconf)
 print("=" * 50)
 
-from mingpt.trainer import Trainer, TrainerConfig
+from MemTrainer import MemTrainer, MemTrainerConfig
 
 # initialize a trainer instance and kick off training
-tconf = TrainerConfig(max_epochs=1, batch_size=128, learning_rate=6e-4,
+tconf = MemTrainerConfig(max_epochs=1, batch_size=128, learning_rate=6e-4,
                       lr_decay=True, warmup_tokens=512*20, final_tokens=2*len(train_dataset)*block_size,
                       num_workers=4)
-trainer = Trainer(model, train_dataset, None, tconf)
+trainer = MemTrainer(model, train_dataset, None, tconf)
 trainer.train()
 print("=" * 50)
 
 # alright, let's sample some character-level Shakespeare
-from mingpt.utils import sample
+from MemUtils import sample
 context = "O God, O God!"
 x = torch.tensor([train_dataset.stoi[s] for s in context], dtype=torch.long)[None,...].to(trainer.device)
 
