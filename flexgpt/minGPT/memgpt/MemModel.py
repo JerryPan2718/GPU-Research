@@ -57,7 +57,7 @@ class CachedDense(CachedModule):
         cache: B(T-1)H  
         """
         cache = self.cache
-        new_out = self.dense(x[:, -1:, :])
+        new_out = x[:, -1:, :]
         y = torch.stack(cache, new_out)
         self.set_cache(y)
         return y
@@ -91,6 +91,9 @@ class CachedSelfAttn(CachedDense):
     def forward(self, x):
         B, T, H = x.size()
         K = self.n_head
+        print(T, K)
+        # assert T % K == 0
+        
         qkt_cached = self.qkt
         y_cached = self.y
         q = self.q(x).view(B, K, T, T // K)
