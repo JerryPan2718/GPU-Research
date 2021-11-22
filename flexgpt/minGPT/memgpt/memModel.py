@@ -55,10 +55,13 @@ class CachedDense(CachedModule):
         """ 
         x: BTH 
         cache: B(T-1)H  
+        new_out: B*1*H
         """
-        cache = self.cache
+        cache = self.cache(x) ## 
         new_out = x[:, -1:, :]
-        y = torch.stack(cache, new_out)
+        print(f"cache {type(cache)}")
+        print(f"new_out {type(new_out)}")
+        y = torch.stack(cache, new_out, dim = 2)
         self.set_cache(y)
         return y
 
@@ -91,7 +94,7 @@ class CachedSelfAttn(CachedDense):
     def forward(self, x):
         B, T, H = x.size()
         K = self.n_head
-        print(T, K)
+        # print(T, K)
         # assert T % K == 0
         
         qkt_cached = self.qkt
@@ -99,6 +102,7 @@ class CachedSelfAttn(CachedDense):
         q = self.q(x).view(B, K, T, T // K)
         k = self.k(x).view(B, K, T, T // K)
         v = self.v(x).view(B, K, T, T // K)
+
         qkt = torch.zeros(B, K, T, T)
         qkt[:, :, :-1, :-1] = qkt_cached
 
@@ -111,7 +115,7 @@ class CachedSelfAttn(CachedDense):
 
         # y_new: BK(T-1)T * BKT(H/K) -> BK(T-1)(H/K)
         y_new = new_attn @ v
-        y = torch.stack(y_cached, new_attn @ v, dim=2)
+        y = torch.stack(y_cached, y_new, dim=2)
         # self.set_cache((qkt, y))
         self.qkt.set_cache(qkt)
         self.y.set_cache(y)
