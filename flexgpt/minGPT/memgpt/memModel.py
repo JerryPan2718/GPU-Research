@@ -92,6 +92,7 @@ class CachedSelfAttn(CachedDense):
         self.q.clear_cache()
         self.k.clear_cache()
         self.v.clear_cache()
+        self.y.clear_cache()
         self.qkt.clear_cache()
     
     def forward(self, x):
@@ -119,7 +120,9 @@ class CachedSelfAttn(CachedDense):
         # y_new: BK(T-1)T * BKT(H/K) -> BK(T-1)(H/K)
         y_new = new_attn @ v
         y = torch.stack(y_cached, y_new, dim=2)
-        # self.set_cache((qkt, y))
+
+        # Clear cache before set cache
+        this.clear_cache()
         self.qkt.set_cache(qkt)
         self.y.set_cache(y)
         return y
