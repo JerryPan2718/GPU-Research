@@ -57,8 +57,11 @@ class CachedDense(CachedModule):
         cache: B(T-1)H  
         new_out: B*1*H
         """
-        cache = self.cache(x) ## 
-        new_out = x[:, -1:, :]
+        # cache = self.cache(x) ## 
+        # new_out = x[:, -1:, :]
+        new_out = nn.Linear(768, 768)(x).cuda()
+        cache = nn.Linear(768, 768)(x).cuda()
+
         print(f"cache {type(cache)}")
         print(f"new_out {type(new_out)}")
         y = torch.stack(cache, new_out, dim = 2)
@@ -77,10 +80,10 @@ class CachedSelfAttn(CachedDense):
         super().__init__()
         assert config.n_embd % config.n_head == 0
 
-        self.k = CachedDense(nn.Linear(config.n_embd, config.n_embd))
-        self.q = CachedDense(nn.Linear(config.n_embd, config.n_embd))
-        self.v = CachedDense(nn.Linear(config.n_embd, config.n_embd))
-        self.y = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.k = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
+        self.q = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
+        self.v = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
+        self.y = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
         self.qkt = CachedDense(None)
         self.n_head = config.n_head
         
@@ -99,11 +102,11 @@ class CachedSelfAttn(CachedDense):
         
         qkt_cached = self.qkt
         y_cached = self.y
-        q = self.q(x).view(B, K, T, T // K)
-        k = self.k(x).view(B, K, T, T // K)
-        v = self.v(x).view(B, K, T, T // K)
+        q = self.q(x).view(B, K, T, T // K).cuda()
+        k = self.k(x).view(B, K, T, T // K).cuda()
+        v = self.v(x).view(B, K, T, T // K).cuda()
 
-        qkt = torch.zeros(B, K, T, T)
+        qkt = torch.zeros(B, K, T, T).cuda()
         qkt[:, :, :-1, :-1] = qkt_cached
 
         # qkt: BKT(H/K) * BKT(H/K).T -> BKTT
