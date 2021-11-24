@@ -117,7 +117,9 @@ class CachedSelfAttn(CachedDense):
         # y_new: BK(T-1)T * BKT(H/K) -> BK(T-1)(H/K)
         y_new = new_attn @ v
         y = torch.stack(y_cached, y_new, dim=2)
-        # self.set_cache((qkt, y))
+
+        # Clear cache before set cache
+        this.clear_cache()
         self.qkt.set_cache(qkt)
         self.y.set_cache(y)
         return y
