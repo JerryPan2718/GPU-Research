@@ -89,6 +89,7 @@ class CachedSelfAttn(CachedDense):
         self.q.clear_cache()
         self.k.clear_cache()
         self.v.clear_cache()
+        self.y.clear_cache()
         self.qkt.clear_cache()
     
     def forward(self, x):
