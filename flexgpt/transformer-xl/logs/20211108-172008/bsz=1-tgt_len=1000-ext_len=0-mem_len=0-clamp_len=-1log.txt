@@ -1,6 +1,0 @@
-Evaluating with bsz 1 tgt_len 1000 ext_len 0 mem_len 0 clamp_len -1
-Time : 745.29s, 3029.61ms/segment
-Time : 652.52s, 2993.22ms/segment
-Time : 733.12s, 2980.14ms/segment
-Time : 648.31s, 2973.92ms/segment
-Time : 732.89s, 2979.23ms/segment

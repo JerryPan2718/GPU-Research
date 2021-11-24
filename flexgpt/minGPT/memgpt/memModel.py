@@ -8,13 +8,12 @@ GPT model:
 """
 
 import math
-import logging
+from loguru import logger
 
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-logger = logging.getLogger(__name__)
 
 class MemGPTConfig:
     """ base GPT config, params common to all GPT versions """
@@ -34,39 +33,6 @@ class MemGPT1Config(MemGPTConfig):
     n_head = 12
     n_embd = 768
 
-class CachedModule(nn.Module):
-    """ cache object """
-    def __init__(self, x = None):
-        super().__init__()
-        self.cache = x
-    
-    def clear_cache(self):
-        self.cache = None
-    
-    def set_cache(self, x):
-        self.cache = x
-
-class CachedDense(CachedModule):
-    """ cached nn.Dense layer """
-    def __init__(self, x = None):
-        CachedModule.__init__(self, x)
-
-    def forward(self, x):
-        """ 
-        x: BTH 
-        cache: B(T-1)H  
-        new_out: B*1*H
-        """
-        # cache = self.cache(x) ## 
-        # new_out = x[:, -1:, :]
-        new_out = nn.Linear(768, 768)(x).cuda()
-        cache = nn.Linear(768, 768)(x).cuda()
-
-        print(f"cache {type(cache)}")
-        print(f"new_out {type(new_out)}")
-        y = torch.stack(cache, new_out, dim = 2)
-        self.set_cache(y)
-        return y
 
 class CachedSelfAttn(CachedDense):
     """" cached attention op """
@@ -80,10 +46,10 @@ class CachedSelfAttn(CachedDense):
         super().__init__()
         assert config.n_embd % config.n_head == 0
 
-        self.k = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
-        self.q = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
-        self.v = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
-        self.y = CachedDense(nn.Linear(config.n_embd, config.n_embd)).cuda()
+        self.k = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.q = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.v = CachedDense(nn.Linear(config.n_embd, config.n_embd))
+        self.y = CachedDense(nn.Linear(config.n_embd, config.n_embd))
         self.qkt = CachedDense(None)
         self.n_head = config.n_head
         
@@ -103,11 +69,11 @@ class CachedSelfAttn(CachedDense):
         
         qkt_cached = self.qkt
         y_cached = self.y
-        q = self.q(x).view(B, K, T, T // K).cuda()
-        k = self.k(x).view(B, K, T, T // K).cuda()
-        v = self.v(x).view(B, K, T, T // K).cuda()
+        q = self.q(x).view(B, K, T, T // K)
+        k = self.k(x).view(B, K, T, T // K)
+        v = self.v(x).view(B, K, T, T // K)
 
-        qkt = torch.zeros(B, K, T, T).cuda()
+        qkt = torch.zeros(B, K, T, T)
         qkt[:, :, :-1, :-1] = qkt_cached
 
         # qkt: BKT(H/K) * BKT(H/K).T -> BKTT
@@ -122,7 +88,7 @@ class CachedSelfAttn(CachedDense):
         y = torch.stack(y_cached, y_new, dim=2)
 
         # Clear cache before set cache
-        this.clear_cache()
+        self.clear_cache()
         self.qkt.set_cache(qkt)
         self.y.set_cache(y)
         return y
